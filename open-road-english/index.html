@@ -206,6 +206,9 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
 .hint { font-size: 12.5px; color: var(--muted); }
 .log.hide-fb .tip, .log.hide-fb .exprs { display: none; }
 .held { align-self: center; font-size: 12.5px; color: var(--muted); }
+.kind { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .04em; padding: 1px 7px; border-radius: 99px; background: var(--surface); border: 1px solid var(--tip-line); margin-bottom: 3px; }
+.usage-box { display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); border-radius: 10px; padding: 10px 12px; font-size: 13px; }
+.usage-box b { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-weight: 500; }
 </style>
 
 <div class="wrap">
@@ -235,6 +238,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       <span>최장 턴 <b id="st-long">0</b> 단어</span>
       <span>말하기 비율 <b id="st-share">0%</b></span>
       <span>속도 <b id="st-wpm">–</b> wpm</span>
+      <span>Claude 사용 <b id="st-usage">0회</b></span>
     </div>
     <div class="row" id="controls">
       <button class="btn" id="btn-send" hidden>지금 보내기</button>
@@ -308,7 +312,12 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
         <label class="label" for="rate">말하기 속도 <span id="rate-val"></span></label>
         <input type="range" id="rate" min="0.7" max="1.3" step="0.05">
       </div>
+      <label class="toggle"><input type="checkbox" id="chimes"><span>알림음<small>내 말이 전송될 때와 내 차례가 됐을 때 짧은 소리로 알려줘요. 화면을 안 봐도 흐름을 알 수 있어요.</small></span></label>
       <label class="toggle"><input type="checkbox" id="over-word"><span>“Over”라고 말하면 바로 보내기<small>문장 끝에 over라고 하면 기다리지 않고 전송해요. 무전기처럼.</small></span></label>
+      <div class="usage-box" aria-live="polite">
+        <span>오늘 이 페이지에서 쓴 양: <b id="usage-today">0회</b> <span class="muted">(토큰은 글자 수로 계산한 추정치)</span></span>
+        <span class="muted">대화는 내 Claude 구독 사용량에서 빠져요. 남은 한도와 초기화 시각은 이 페이지가 볼 수 없어서 claude.ai 설정의 사용량 화면에서 확인해야 해요. 한도에 닿으면 페이지에 바로 알려드려요.</span>
+      </div>
     </div>
   </details>
 
@@ -364,7 +373,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     mid: { ko: "중급", desc: "Intermediate (B1-B2). Natural everyday English with an occasional useful idiom.", len: "2 to 3 sentences" },
     adv: { ko: "고급", desc: "Advanced (C1). Native-like English with idioms and phrasal verbs; ask deeper follow-ups.", len: "2 to 4 sentences" },
   };
-  const DEFAULTS = { scenario: "drive", custom: "", mode: "tap", level: "mid", pause: 4000, rate: 0.95, voice: "buttery", spokenFix: "recast", feedback: "now", devVoice: "", overWord: false, lang: "en" };
+  const DEFAULTS = { scenario: "drive", custom: "", mode: "tap", level: "mid", pause: 4000, rate: 0.95, voice: "buttery", spokenFix: "recast", feedback: "now", devVoice: "", chimes: true, overWord: false, lang: "en" };
   let settings = { ...DEFAULTS };
   try { Object.assign(settings, JSON.parse(localStorage.getItem("ore-settings") || "{}")); } catch {}
   if (typeof settings.spokenFix === "boolean") settings.spokenFix = settings.spokenFix ? "recast" : "off";
@@ -420,6 +429,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     logEl.classList.toggle("hide-fb", !!session && settings.feedback === "end");
     fillDevVoices();
     $("#over-word").checked = settings.overWord;
+    $("#chimes").checked = settings.chimes !== false;
     const scn = SCENARIOS.find((s) => s.id === settings.scenario);
     const p = settings.pause ? (settings.pause / 1000) + "초 멈추면 전송" : "탭으로 전송";
     $("#settings-sum").textContent = `${scn.ko} · ${LEVELS[settings.level].ko} · ${settings.mode === "hands" ? "핸즈프리" : "탭 대화"} · ${p} · 피드백 ${settings.feedback === "now" ? "바로" : "끝나고"}`;
@@ -450,6 +460,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     ss.cancel(); ss.speak(u);
   };
   $("#over-word").onchange = (e) => { settings.overWord = e.target.checked; saveSettings(); };
+  $("#chimes").onchange = (e) => { settings.chimes = e.target.checked; saveSettings(); if (settings.chimes) { unlockAudio(); chime("turn"); } };
 
   // ---------- orb / stage rendering ----------
   const ORB_TEXT = {
@@ -522,13 +533,50 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     $("#st-long").textContent = me.reduce((a, t) => Math.max(a, t.words), 0);
     $("#st-share").textContent = mw + aw ? Math.round((mw / (mw + aw)) * 100) + "%" : "0%";
     $("#st-wpm").textContent = wpm ?? "–";
+    $("#st-usage").textContent = fmtUsage(session.usage);
+  }
+
+  // ---------- usage estimate ----------
+  // The page cannot read the account's remaining limit; it counts what it sends and receives.
+  function estTokens(s) { s = s || ""; const h = (s.match(/[\u3131-\uD79D]/g) || []).length; return Math.round((s.length - h) / 4 + h / 1.5); }
+  function fmtUsage(u) { if (!u || !u.calls) return "0회"; const k = u.tokens >= 1000 ? (u.tokens / 1000).toFixed(1) + "k" : String(u.tokens); return `${u.calls}회 · 약 ${k} 토큰`; }
+  function todayKey() { const d = new Date(); return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate(); }
+  function loadToday() { try { const u = JSON.parse(localStorage.getItem("ore-usage") || "null"); if (u && u.day === todayKey()) return u; } catch {} return { day: todayKey(), calls: 0, tokens: 0 }; }
+  function trackUsage(input, out, extra) {
+    const inText = typeof input === "string" ? input : input.map((m) => m.content).join("\n");
+    const tok = estTokens(inText) + estTokens(out || "");
+    if (session) { session.usage.calls++; session.usage.tokens += tok; }
+    if (extra) { extra.calls++; extra.tokens += tok; }
+    const t = loadToday(); t.calls++; t.tokens += tok;
+    try { localStorage.setItem("ore-usage", JSON.stringify(t)); } catch {}
+    renderUsage(t);
+  }
+  function renderUsage(t) { $("#usage-today").textContent = fmtUsage(t || loadToday()); if (session) $("#st-usage").textContent = fmtUsage(session.usage); }
+
+  // ---------- chimes (eyes-free cues) ----------
+  let actx = null;
+  function unlockAudio() { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume?.(); } catch { actx = null; } }
+  function chime(kind) {
+    if (!actx || settings.chimes === false) return;
+    try {
+      const notes = kind === "sent" ? [660, 494] : [523, 784];
+      let t = actx.currentTime + 0.01;
+      for (const f of notes) {
+        const o = actx.createOscillator(), g = actx.createGain();
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+        o.connect(g).connect(actx.destination); o.start(t); o.stop(t + 0.2); t += 0.12;
+      }
+    } catch {}
   }
 
   // ---------- log rendering ----------
   const logEl = $("#log");
   function tipNode(tip) {
     const box = el("div", "tip");
-    box.append(el("div", "said", tip.said));
+    const KIND = { grammar: "문법", word: "단어 선택", natural: "더 자연스럽게" };
+    if (KIND[tip.kind]) box.append(el("span", "kind", KIND[tip.kind]));
+    if (tip.said) box.append(el("div", "said", tip.said));
     const better = el("div", "better", tip.better);
     box.append(better);
     if (tip.why_ko) box.append(el("div", "why", tip.why_ko));
@@ -577,11 +625,11 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       { role: "assistant", content: "Oh no, you didn't sleep well? That's rough. What kept you up last night?", words: 14, exprs: [{ en: "stop by", ko: "잠깐 들르다" }, { en: "That's rough.", ko: "힘들었겠다" }] },
     ];
     const nodes = ex.map((t) => ({ ...t, node: renderTurn(t, true) }));
-    attachTip(nodes[1], { said: "yesterday i was so tired and i didn't sleep well", better: "I didn't sleep well last night, so I'm really tired today.", why_ko: "어제 일과 오늘 상태를 연결할 땐 원인 → 결과 순서가 자연스러워요." });
+    attachTip(nodes[1], { said: "yesterday i was so tired and i didn't sleep well", better: "I didn't sleep well last night, so I'm really tired today.", why_ko: "어제 일과 오늘 상태를 연결할 땐 원인 → 결과 순서가 자연스러워요.", kind: "natural" });
   }
 
   // ---------- prompts ----------
-  function rules() {
+  function rules(memo) {
     const scn = SCENARIOS.find((s) => s.id === (session?.scenario || settings.scenario));
     const lv = LEVELS[session?.level || settings.level];
     const brief = scn.id === "custom" ? `Talk with the learner about this topic they chose: "${str(settings.custom, 200) || "anything"}".` : scn.brief;
@@ -593,16 +641,21 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       `How to talk:`,
       `- The learner's turns are speech-to-text transcripts. Ignore punctuation, capitalization, filler words and small transcription glitches; never correct those.`,
       `- The learner's goal is to speak as much as possible. Long answers are great. Respond to the substance of what they said (show you listened by picking up a specific detail), then ask ONE open follow-up question (how / why / what happened / tell me about) that invites another long answer.`,
-      `- Keep your own reply short: ${lv.len}. Plain spoken English only: no lists, markdown, emoji or parentheses. It will be read aloud.`,
+      `- Keep your own reply short: ${lv.len}. Never ask more than one question. Plain spoken English only: no lists, markdown, emoji or parentheses. It will be read aloud.`,
+      `- Sound like a real friend, not a teacher. Vary how you react; don't open every reply with "Wow", "That's great", "Nice" or "Oh". Don't repeat a question you already asked.`,
       `- If the learner's turn is very short, encourage them to say more with a specific, easy question.`,
       `- If they speak Korean or ask how to say something, give the natural English phrase, then invite them to try it in their own sentence.`,
       spokenRule(),
       scn.id === "drive" ? `- The learner is driving right now. Never ask them to look at, read or write anything. If they mention traffic or needing to focus, say something brief and calm and let them come back when ready.` : ``,
       ``,
-      `Reply with only a JSON object, no other text:`,
-      `{"reply": "what you say aloud", "tip": null or {"said": "short exact quote of the learner's words", "better": "a more natural or correct way to say it", "why_ko": "한국어 한 문장 설명"}, "expressions": [{"en": "useful English phrase", "ko": "한국어 뜻"}]}`,
-      `- "tip": the single most useful correction or more natural phrasing from the learner's LATEST turn. null if their English was fine or there is no learner turn yet.`,
-      `- "expressions": 0 to 2 phrases worth learning from this exchange (often from your reply, or what the learner was trying to say).`,
+      `Reply with only a JSON object, keys in exactly this order, no other text:`,
+      `{"reply": "what you say aloud", "tip": null or {"kind": "grammar" | "word" | "natural", "said": "short exact quote of the learner's words", "better": "the corrected version", "why_ko": "한국어 한 문장 설명"}, "expressions": [{"en": "useful English phrase", "ko": "한국어 뜻"}]}`,
+      `- "tip": the single most useful correction from the learner's LATEST turn, or null if their English was fine or there is no learner turn yet.`,
+      `  Only flag what would sound wrong or unnatural when SPOKEN. Never flag punctuation, capitalization, spelling, homophones (their/there, to/too), small words speech-to-text often drops (a, the, plural -s), fillers or self-corrections. When unsure, use null.`,
+      `  "kind": "grammar" for a real grammar error, "word" for a wrong word choice, "natural" when it was correct but a native speaker would say it differently. Prefer grammar and word errors over "natural" suggestions.`,
+      `  "better": rewrite the whole quoted part with the learner's meaning, short enough to repeat aloud.`,
+      `- "expressions": 0 to 2 phrases worth learning from this exchange (often what the learner was trying to say, or a phrase from your reply).`,
+      memo || ``,
       ``,
       `Start the conversation now: greet the learner briefly and ask an easy opening question that fits the scenario.`,
     ];
@@ -614,11 +667,28 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     if (sp === "explicit") return `- If the learner's latest turn has a clear grammar or word-choice mistake, start your reply with ONE short explicit correction in exactly this form: Quick tip: say "<better version>" instead of "<what they said>". Then continue the conversation naturally. Skip the tip when their English was fine. Never give more than one tip per reply.`;
     return `- Do not correct the learner inside "reply" at all; just keep the conversation flowing. Corrections go only in "tip".`;
   }
+  // Recent turns go in verbatim; older ones are compressed so long sessions keep their memory without growing cost.
   function buildInput() {
-    const hist = session.turns.slice(-30).map((t) => ({ role: t.role, content: t.content }));
-    while (hist.length && hist[0].role === "assistant" && session.turns.length > 30) hist.shift();
-    return [{ role: "user", content: rules() }, ...hist];
+    const KEEP = 20;
+    const all = session.turns;
+    const older = all.slice(0, Math.max(0, all.length - KEEP));
+    let memo = "";
+    if (older.length) {
+      let said = older.filter((t) => t.role === "user").map((t) => "- " + t.content.slice(0, 160)).join("\n");
+      let asked = older.filter((t) => t.role === "assistant").map((t) => (t.content.match(/[^.!?]*\?/g) || []).pop()).filter(Boolean).map((q) => "- " + q.trim()).join("\n");
+      if (said.length > 2500) said = said.slice(-2500);
+      if (asked.length > 1200) asked = asked.slice(-1200);
+      memo = `\nEarlier in this conversation (these older turns are not repeated below):\nThe learner said:\n${said}\nQuestions you already asked (don't repeat them):\n${asked}`;
+    }
+    return [{ role: "user", content: rules(memo) }, ...all.slice(-KEEP).map((t) => ({ role: t.role, content: t.content }))];
   }
+  // Pull the finished "reply" string out of a JSON answer that is still streaming.
+  function earlyReplyFrom(raw) {
+    const m = raw.match(/"reply"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (!m) return null;
+    try { return JSON.parse('"' + m[1] + '"'); } catch { return null; }
+  }
+  const normTip = (x) => (x || "").toLowerCase().replace(/[^a-z0-9' ]/g, " ").replace(/\s+/g, " ").trim();
 
   // ---------- speech out ----------
   let enVoice = null;
@@ -702,6 +772,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     } else {
       setPhase("ready");
     }
+    if (!pendingTyped) chime("turn");
     // A message typed before the session started goes out right after the greeting.
     if (pendingTyped && session) { const t = pendingTyped; pendingTyped = null; accepting = false; addUserTurn(t, 0); askAI(); }
   }
@@ -791,6 +862,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     accepting = false; finalText = ""; partial = ""; speechStart = 0;
     renderLive();
     if (!text) { setPhase(settings.mode === "tap" ? "ready" : "listening"); accepting = settings.mode === "hands"; return; }
+    chime("sent");
     addUserTurn(text, ms);
     await askAI();
   }
@@ -803,28 +875,47 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     if (!S) { notice("ai", "이 화면에서는 Claude와 대화할 수 없어요. claude.ai에서 이 아티팩트를 열어주세요.", true); setPhase(session ? "error" : "off"); return; }
     setPhase(session.turns.length ? "thinking" : "opening");
     ctl?.abort(); ctl = new AbortController();
+    const mine = session;
+    const input = buildInput();
+    const lastUser = [...session.turns].reverse().find((t) => t.role === "user");
+    let turn = null, speakP = null, raw = "", tracked = false;
+    const track = (out) => { if (!tracked) { tracked = true; trackUsage(input, out); } };
+    // Speak as soon as the reply is complete, while the tip and expressions are still being written.
+    const begin = (reply) => {
+      turn = { role: "assistant", content: reply, words: words(reply), exprs: [] };
+      session.turns.push(turn); renderTurn(turn); renderStats();
+      setAiLine(reply, "Jamie:"); notice("ai", null);
+      speakP = speakReply(reply);
+    };
     try {
-      const res = await S.json(buildInput(), { modelTier: "quick", cache: false, signal: ctl.signal });
-      if (!session) return;
-      const reply = str(res?.reply, 1500);
-      if (!reply) throw { code: "empty_completion" };
-      notice("ai", null);
+      const res = await S.json(input, {
+        modelTier: "quick", cache: false, signal: ctl.signal,
+        onText: ({ text }) => {
+          raw = text;
+          if (turn || session !== mine) return;
+          const r = str(earlyReplyFrom(text) || "", 1500);
+          if (r) begin(r);
+        },
+      });
+      track(raw || JSON.stringify(res || {}));
+      if (session !== mine) return;
+      if (!turn) { const reply = str(res?.reply, 1500); if (!reply) throw { code: "empty_completion" }; begin(reply); }
       const exprs = Array.isArray(res?.expressions) ? res.expressions.slice(0, 2).map((x) => ({ en: str(x?.en, 120), ko: str(x?.ko, 120) })).filter((x) => x.en) : [];
-      const tipRaw = res?.tip && typeof res.tip === "object" ? res.tip : null;
-      const tip = tipRaw && str(tipRaw.better) ? { said: str(tipRaw.said, 300), better: str(tipRaw.better, 300), why_ko: str(tipRaw.why_ko, 300) } : null;
-      const lastUser = [...session.turns].reverse().find((t) => t.role === "user");
+      if (exprs.length) { turn.exprs = exprs; turn.node?.append(exprNodes(exprs)); }
+      const tr = res?.tip && typeof res.tip === "object" ? res.tip : null;
+      let tip = tr && str(tr.better) ? { kind: ["grammar", "word", "natural"].includes(tr.kind) ? tr.kind : "", said: str(tr.said, 300), better: str(tr.better, 300), why_ko: str(tr.why_ko, 300) } : null;
+      if (tip && normTip(tip.said) === normTip(tip.better)) tip = null; // a "correction" that changes nothing
       if (tip && lastUser && !lastUser.tip) attachTip(lastUser, tip);
-      const t = { role: "assistant", content: reply, words: words(reply), exprs };
-      session.turns.push(t); renderTurn(t); renderStats();
-      setAiLine(reply, "Jamie:");
-      await speakReply(reply);
+      await speakP;
     } catch (e) {
-      if (!session || e?.code === "cancelled") return;
+      track(e?.text || raw);
+      if (session !== mine || e?.code === "cancelled") return;
+      if (turn) return; // the reply is already out; only the extras were lost
       const c = e?.code;
       const msg = {
         not_granted: "Claude 사용이 허용되지 않았어요. 다시 시작하면 허용 창이 다시 떠요.",
         sampling_disabled: "이 계정에서는 Claude를 쓸 수 없어요.",
-        rate_limited: e?.reason === "usage_limit" ? "Claude 사용 한도에 닿았어요. 나중에 다시 해주세요." : "요청이 많아요. 잠시 뒤 버튼을 눌러 다시 시도하세요.",
+        rate_limited: e?.reason === "usage_limit" ? "Claude 구독 사용 한도에 닿았어요. 한도가 초기화되는 시각은 claude.ai 설정의 사용량 화면에서 볼 수 있어요." : "요청이 몰렸어요. 잠시 뒤 버튼을 눌러 다시 시도하세요.",
         session_expired: "claude.ai 로그인이 만료됐어요. 다시 로그인한 뒤 시도하세요.",
         refused: "이 내용에는 답할 수 없대요. 다른 말로 이어가 보세요.",
       }[c] || "답을 받지 못했어요. 버튼을 눌러 다시 시도하세요.";
@@ -843,7 +934,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
   function startSession() {
     if (!capsReady) { notice("ai", "아직 연결 중이에요. 잠시 뒤 다시 눌러주세요."); return; }
     if (!S) { notice("ai", "이 화면에서는 Claude와 대화할 수 없어요. claude.ai에서 이 아티팩트를 열어주세요.", true); return; }
-    session = { id: "s" + Date.now(), started: Date.now(), turns: [], scenario: settings.scenario, level: settings.level, mode: settings.mode, feedback: settings.feedback };
+    session = { id: "s" + Date.now(), started: Date.now(), turns: [], scenario: settings.scenario, level: settings.level, mode: settings.mode, feedback: settings.feedback, usage: { calls: 0, tokens: 0 } };
     finalText = ""; partial = ""; accepting = false; speechStart = 0;
     logEl.replaceChildren(); $("#log-sub").textContent = "지금 대화";
     logEl.classList.toggle("hide-fb", settings.feedback === "end");
@@ -853,6 +944,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     notice("mode", null);
     if (settings.mode === "hands") startDictation();
     if (!useClaudeVoice()) unlockBrowserSpeech();
+    unlockAudio();
     requestWakeLock();
     renderStats();
     askAI();
@@ -874,6 +966,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
   }
 
   function onOrb() {
+    unlockAudio();
     if (!session) { startSession(); return; }
     switch (phase) {
       case "ready":
@@ -967,12 +1060,15 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       transcript,
     ].join("\n");
     let r;
-    try { r = await S.json(prompt, { cache: false }); }
+    const usage = { ...(done.usage || { calls: 0, tokens: 0 }) };
+    try { r = await S.json(prompt, { cache: false }); trackUsage(prompt, JSON.stringify(r || {}), usage); }
     catch (e) {
+      trackUsage(prompt, e?.text || "", usage);
       box.replaceChildren(el("div", "card", e?.code === "rate_limited" ? "사용량이 많아 복습을 만들지 못했어요. 대화 기록은 위에 남아 있어요." : "복습을 만들지 못했어요. 대화 기록은 위에 남아 있어요."));
       const retry = el("button", "btn", "복습 다시 만들기"); retry.onclick = () => runReview(done); box.firstChild.append(retry);
       return;
     }
+    stats.claudeCalls = usage.calls; stats.tokens = usage.tokens;
     const note = {
       createdAt: Date.now(),
       scenario: done.scenario, scenarioKo: scn.ko, level: done.level, stats,
@@ -994,7 +1090,8 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     const c = el("div", asCard ? "card" : "body");
     const st = n.stats || {};
     const s = el("div", "stats"); s.style.justifyContent = "flex-start";
-    for (const [k, v] of [["턴", st.turns], ["단어", st.words], ["최장 턴", st.longest], ["분", st.minutes]]) { const x = el("span", null, k + " "); x.append(el("b", null, String(v ?? "–"))); s.append(x); }
+    for (const [k, v] of [["턴", st.turns], ["단어", st.words], ["최장 턴", st.longest], ["분", st.minutes], ["Claude", st.claudeCalls ? fmtUsage({ calls: st.claudeCalls, tokens: st.tokens || 0 }) : null]]) {
+      if (v == null) continue; const x = el("span", null, k + " "); x.append(el("b", null, String(v ?? "–"))); s.append(x); }
     c.append(s);
     if (n.summary_ko) c.append(el("p", null, n.summary_ko));
     if (n.strengths?.length) { c.append(el("h3", null, "잘한 점")); const ul = el("ul"); for (const x of n.strengths) ul.append(el("li", null, x)); c.append(ul); }
@@ -1087,6 +1184,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     if (D) wireDictation();
     if (T && typeof T.setRate === "function") T.setRate(settings.rate).catch(() => {});
     renderCaps();
+    renderUsage();
     subscribeNotes();
     renderOrb();
   })();
