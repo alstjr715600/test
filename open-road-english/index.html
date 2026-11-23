@@ -198,6 +198,14 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
 .empty { color: var(--muted); font-size: 14px; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; }
 .muted { color: var(--muted); }
 .safety { font-size: 12.5px; color: var(--muted); text-align: center; }
+.stage.live-tap { cursor: pointer; }
+.voice-row { display: grid; grid-template-columns: 9em minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.voice-row label { font-size: 14px; font-weight: 500; }
+.voice-row label small { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+@media (max-width: 480px) { .voice-row { grid-template-columns: minmax(0, 1fr) auto; } .voice-row label { grid-column: 1 / -1; } }
+.hint { font-size: 12.5px; color: var(--muted); }
+.log.hide-fb .tip, .log.hide-fb .exprs { display: none; }
+.held { align-self: center; font-size: 12.5px; color: var(--muted); }
 </style>
 
 <div class="wrap">
@@ -248,8 +256,8 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       <div class="field">
         <span class="label">대화 방식</span>
         <div class="mode-cards" id="modes">
-          <button class="mode-card" data-mode="hands"><b>핸즈프리 · 운전용</b><span>한 번 누르면 계속 들어요. 말을 멈추면 자동 전송되고, 답은 기기 음성으로 읽어줘요.</span></button>
-          <button class="mode-card" data-mode="tap"><b>탭 대화 · Claude 음성</b><span>내 차례마다 버튼을 한 번 눌러 말해요. 더 자연스러운 Claude 목소리.</span></button>
+          <button class="mode-card" data-mode="tap"><b>탭 대화 · Claude 음성</b><span>발음이 자연스러운 Claude 목소리로 답해요. 답을 들은 뒤 화면 아무 곳이나 한 번 탭하면 내 차례가 시작돼요.</span></button>
+          <button class="mode-card" data-mode="hands"><b>핸즈프리 · 기기 음성</b><span>한 번 누르면 계속 들어서 말만으로 이어져요. 답은 휴대폰·PC에 설치된 목소리로 읽어요.</span></button>
         </div>
       </div>
       <div class="grid2">
@@ -266,19 +274,40 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
           </div>
         </div>
       </div>
-      <div class="grid2">
-        <div class="field">
-          <label class="label" for="rate">말하기 속도 <span id="rate-val"></span></label>
-          <input type="range" id="rate" min="0.7" max="1.3" step="0.05">
+      <div class="field">
+        <span class="label">피드백 받는 시점</span>
+        <div class="mode-cards" id="feedbacks">
+          <button class="mode-card" data-fb="now"><b>대화 중 바로</b><span>내가 말할 때마다 고칠 점을 바로 알려줘요.</span></button>
+          <button class="mode-card" data-fb="end"><b>끝나고 한 번에</b><span>대화 중엔 흐름에만 집중하고, 끝나면 고칠 점을 모두 모아서 보여줘요.</span></button>
         </div>
-        <div class="field">
-          <label class="label" for="voice">Claude 목소리 <span>(탭 대화)</span></label>
+      </div>
+      <div class="field" id="spoken-field">
+        <span class="label">바로 피드백 방식</span>
+        <div class="seg" id="spokens">
+          <button data-sp="off">화면만</button><button data-sp="recast">자연스럽게</button><button data-sp="explicit">확실하게 짚기</button>
+        </div>
+        <span class="hint" id="spoken-desc"></span>
+      </div>
+      <div class="field">
+        <span class="label">목소리</span>
+        <div class="voice-row">
+          <label for="voice">Claude 목소리<small>탭 대화에서 사용</small></label>
           <select id="voice">
             <option value="buttery">Buttery</option><option value="airy">Airy</option><option value="glassy">Glassy</option><option value="rounded">Rounded</option>
           </select>
+          <button class="btn" type="button" id="try-claude">들어보기</button>
         </div>
+        <div class="voice-row">
+          <label for="dev-voice">기기 목소리<small>핸즈프리에서 사용</small></label>
+          <select id="dev-voice"><option value="">자동 (가장 좋은 목소리)</option></select>
+          <button class="btn" type="button" id="try-dev">들어보기</button>
+        </div>
+        <span class="hint">Claude 목소리는 마이크가 켜져 있는 동안 말할 수 없어서 핸즈프리에서는 기기 목소리를 써요. 발음이 중요하면 탭 대화를 쓰세요. 기기 목소리 중에선 Natural·Online·Google이 붙은 목소리가 가장 자연스러워요.</span>
       </div>
-      <label class="toggle"><input type="checkbox" id="spoken-fix"><span>대화 중에 자연스럽게 고쳐 말해주기<small>AI가 답하면서 틀린 표현을 맞게 바꿔 다시 말해줘요. 끄면 교정은 화면과 복습 노트에만 나와요.</small></span></label>
+      <div class="field">
+        <label class="label" for="rate">말하기 속도 <span id="rate-val"></span></label>
+        <input type="range" id="rate" min="0.7" max="1.3" step="0.05">
+      </div>
       <label class="toggle"><input type="checkbox" id="over-word"><span>“Over”라고 말하면 바로 보내기<small>문장 끝에 over라고 하면 기다리지 않고 전송해요. 무전기처럼.</small></span></label>
     </div>
   </details>
@@ -335,9 +364,12 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     mid: { ko: "중급", desc: "Intermediate (B1-B2). Natural everyday English with an occasional useful idiom.", len: "2 to 3 sentences" },
     adv: { ko: "고급", desc: "Advanced (C1). Native-like English with idioms and phrasal verbs; ask deeper follow-ups.", len: "2 to 4 sentences" },
   };
-  const DEFAULTS = { scenario: "drive", custom: "", mode: "hands", level: "mid", pause: 4000, rate: 0.95, voice: "buttery", spokenFix: true, overWord: false, lang: "en" };
+  const DEFAULTS = { scenario: "drive", custom: "", mode: "tap", level: "mid", pause: 4000, rate: 0.95, voice: "buttery", spokenFix: "recast", feedback: "now", devVoice: "", overWord: false, lang: "en" };
   let settings = { ...DEFAULTS };
   try { Object.assign(settings, JSON.parse(localStorage.getItem("ore-settings") || "{}")); } catch {}
+  if (typeof settings.spokenFix === "boolean") settings.spokenFix = settings.spokenFix ? "recast" : "off";
+  if (!["off", "recast", "explicit"].includes(settings.spokenFix)) settings.spokenFix = "recast";
+  if (!["now", "end"].includes(settings.feedback)) settings.feedback = "now";
   function saveSettings() { try { localStorage.setItem("ore-settings", JSON.stringify(settings)); } catch {} renderSettings(); }
 
   // ---------- capabilities ----------
@@ -377,11 +409,20 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     for (const b of document.querySelectorAll("#pauses button")) b.setAttribute("aria-pressed", String(Number(b.dataset.pause) === settings.pause));
     $("#rate").value = settings.rate; $("#rate-val").textContent = "× " + Number(settings.rate).toFixed(2);
     $("#voice").value = settings.voice;
-    $("#spoken-fix").checked = settings.spokenFix;
+    for (const b of document.querySelectorAll("#feedbacks .mode-card")) b.setAttribute("aria-pressed", String(b.dataset.fb === settings.feedback));
+    for (const b of document.querySelectorAll("#spokens button")) b.setAttribute("aria-pressed", String(b.dataset.sp === settings.spokenFix));
+    $("#spoken-field").hidden = settings.feedback !== "now";
+    $("#spoken-desc").textContent = {
+      off: "AI는 대화만 이어가고, 고칠 점은 화면 카드로만 보여줘요.",
+      recast: "AI가 답하면서 맞는 표현으로 자연스럽게 바꿔 말해줘요. 예: \"Oh, you went there last week?\"",
+      explicit: "AI가 \"Quick tip: say … instead of …\" 하고 짚어준 뒤 대화를 이어가요. 화면을 못 보는 운전 중에 좋아요.",
+    }[settings.spokenFix];
+    logEl.classList.toggle("hide-fb", !!session && settings.feedback === "end");
+    fillDevVoices();
     $("#over-word").checked = settings.overWord;
     const scn = SCENARIOS.find((s) => s.id === settings.scenario);
     const p = settings.pause ? (settings.pause / 1000) + "초 멈추면 전송" : "탭으로 전송";
-    $("#settings-sum").textContent = `${scn.ko} · ${LEVELS[settings.level].ko} · ${settings.mode === "hands" ? "핸즈프리" : "탭 대화"} · ${p}`;
+    $("#settings-sum").textContent = `${scn.ko} · ${LEVELS[settings.level].ko} · ${settings.mode === "hands" ? "핸즈프리" : "탭 대화"} · ${p} · 피드백 ${settings.feedback === "now" ? "바로" : "끝나고"}`;
     $("#btn-lang").textContent = settings.lang === "ko" ? "마이크: 한국어" : "마이크: English";
     $("#orb").style.setProperty("--pause", (settings.pause || 4000) + "ms");
     renderOrb();
@@ -392,14 +433,29 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
   for (const b of document.querySelectorAll("#pauses button")) b.onclick = () => { settings.pause = Number(b.dataset.pause); saveSettings(); };
   $("#rate").oninput = (e) => { settings.rate = Number(e.target.value); T?.setRate?.(settings.rate); saveSettings(); };
   $("#voice").onchange = (e) => { settings.voice = e.target.value; saveSettings(); };
-  $("#spoken-fix").onchange = (e) => { settings.spokenFix = e.target.checked; saveSettings(); };
+  for (const b of document.querySelectorAll("#feedbacks .mode-card")) b.onclick = () => { settings.feedback = b.dataset.fb; saveSettings(); };
+  for (const b of document.querySelectorAll("#spokens button")) b.onclick = () => { settings.spokenFix = b.dataset.sp; saveSettings(); };
+  $("#dev-voice").onchange = (e) => { settings.devVoice = e.target.value; enVoice = null; saveSettings(); };
+  const SAMPLE_LINE = "Hi, I'm Jamie. Let's practice some English together. So, where are you headed today?";
+  $("#try-claude").onclick = () => {
+    if (!T || ttsBlocked) { notice("tts", "이 화면에서는 Claude 목소리를 쓸 수 없어요. Chrome이나 Edge 브라우저 탭에서 열어주세요."); return; }
+    if (D && D.active()) { notice("tts", "마이크가 켜져 있는 동안엔 Claude 목소리를 들을 수 없어요."); return; }
+    T.speak(SAMPLE_LINE, { voice: settings.voice, rate: settings.rate, language: "en" }).catch((e) => {
+      if (e?.code === "not_granted") { ttsBlocked = true; renderCaps(); notice("tts", "Claude 음성이 꺼져 있어요. 아티팩트의 권한 메뉴에서 켤 수 있어요."); }
+    });
+  };
+  $("#try-dev").onclick = () => {
+    const ss = window.speechSynthesis; if (!ss) { notice("tts", "이 브라우저에는 기기 목소리가 없어요."); return; }
+    const u = new SpeechSynthesisUtterance(SAMPLE_LINE); u.lang = "en-US"; u.rate = settings.rate; const v = pickVoice(); if (v) u.voice = v;
+    ss.cancel(); ss.speak(u);
+  };
   $("#over-word").onchange = (e) => { settings.overWord = e.target.checked; saveSettings(); };
 
   // ---------- orb / stage rendering ----------
   const ORB_TEXT = {
     off: ["Start", "눌러서 대화 시작"],
     opening: ["Ready…", "대화 상대가 인사를 준비 중"],
-    ready: ["Talk", "눌러서 말하기"],
+    ready: ["Talk", "화면 아무 곳이나 탭해서 말하기"],
     listening: ["Listening", ""],
     finishing: ["Sending", "마지막 말을 받는 중"],
     thinking: ["Thinking", "답을 생각하는 중"],
@@ -425,6 +481,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     $("#btn-end").hidden = !live;
     $("#stats").hidden = !live;
     $("#safety").hidden = live && settings.mode === "tap";
+    $(".stage").classList.toggle("live-tap", live);
   }
   function renderLive() {
     const live = $("#live"); live.replaceChildren();
@@ -539,9 +596,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       `- Keep your own reply short: ${lv.len}. Plain spoken English only: no lists, markdown, emoji or parentheses. It will be read aloud.`,
       `- If the learner's turn is very short, encourage them to say more with a specific, easy question.`,
       `- If they speak Korean or ask how to say something, give the natural English phrase, then invite them to try it in their own sentence.`,
-      settings.spokenFix
-        ? `- If they made a clear grammar or word-choice mistake, weave a quick natural recast into the start of your reply (for example: "Oh, you went there last week? ..."), without lecturing or saying "you made a mistake".`
-        : `- Do not correct the learner inside "reply"; corrections go only in "tip".`,
+      spokenRule(),
       scn.id === "drive" ? `- The learner is driving right now. Never ask them to look at, read or write anything. If they mention traffic or needing to focus, say something brief and calm and let them come back when ready.` : ``,
       ``,
       `Reply with only a JSON object, no other text:`,
@@ -553,6 +608,12 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     ];
     return lines.filter((l, i) => l !== "" || lines[i - 1] !== "").join("\n");
   }
+  function spokenRule() {
+    const sp = settings.feedback === "now" ? settings.spokenFix : "off";
+    if (sp === "recast") return `- If they made a clear grammar or word-choice mistake, weave a quick natural recast into the start of your reply (for example: "Oh, you went there last week? ..."), without lecturing or saying "you made a mistake".`;
+    if (sp === "explicit") return `- If the learner's latest turn has a clear grammar or word-choice mistake, start your reply with ONE short explicit correction in exactly this form: Quick tip: say "<better version>" instead of "<what they said>". Then continue the conversation naturally. Skip the tip when their English was fine. Never give more than one tip per reply.`;
+    return `- Do not correct the learner inside "reply" at all; just keep the conversation flowing. Corrections go only in "tip".`;
+  }
   function buildInput() {
     const hist = session.turns.slice(-30).map((t) => ({ role: t.role, content: t.content }));
     while (hist.length && hist[0].role === "assistant" && session.turns.length > 30) hist.shift();
@@ -561,14 +622,39 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
 
   // ---------- speech out ----------
   let enVoice = null;
+  function voiceScore(v) {
+    const n = v.name; let s = 0;
+    if (/natural|neural|online|premium|enhanced|wavenet|studio|siri/i.test(n)) s += 50;
+    if (/google/i.test(n)) s += 30;
+    if (/aria|jenny|guy|ava|andrew|emma|brian|michelle|samantha|daniel|karen|serena|libby|sonia|ryan/i.test(n)) s += 15;
+    if (/en[-_]US/i.test(v.lang)) s += 10; else if (/en[-_](GB|AU|CA|IE|NZ)/i.test(v.lang)) s += 5;
+    if (!v.localService) s += 5;
+    if (/compact|espeak|novelty|whisper|zarvox|bad news|bells|boing|bubbles|cellos|trinoids|albert|jester|organ|superstar|wobble|fred|junior|ralph|kathy|bahh|grandma|grandpa|rocko|shelley|eddy|flo|reed|sandy/i.test(n)) s -= 60;
+    return s;
+  }
+  function englishVoices() {
+    const ss = window.speechSynthesis; if (!ss) return [];
+    return ss.getVoices().filter((v) => /^en([-_]|$)/i.test(v.lang)).sort((a, b) => voiceScore(b) - voiceScore(a));
+  }
   function pickVoice() {
-    const ss = window.speechSynthesis; if (!ss) return null;
     if (enVoice) return enVoice;
-    const vs = ss.getVoices().filter((v) => /^en[-_]/i.test(v.lang));
-    enVoice = vs.find((v) => /en[-_]US/i.test(v.lang) && /Google|Natural|Samantha|Aria|Jenny/i.test(v.name)) || vs.find((v) => /en[-_]US/i.test(v.lang)) || vs[0] || null;
+    const vs = englishVoices();
+    enVoice = (settings.devVoice && vs.find((v) => v.voiceURI === settings.devVoice)) || vs[0] || null;
     return enVoice;
   }
-  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { enVoice = null; pickVoice(); };
+  let devVoiceKey = "";
+  function fillDevVoices() {
+    const sel = $("#dev-voice"); if (!sel) return;
+    const vs = englishVoices();
+    const key = vs.map((v) => v.voiceURI).join("|");
+    if (key !== devVoiceKey) {
+      devVoiceKey = key;
+      const auto = el("option", null, vs[0] ? `자동 · ${vs[0].name}` : "자동 (가장 좋은 목소리)"); auto.value = "";
+      sel.replaceChildren(auto, ...vs.map((v) => { const o = el("option", null, `${v.name} (${v.lang})`); o.value = v.voiceURI; return o; }));
+    }
+    sel.value = vs.some((v) => v.voiceURI === settings.devVoice) ? settings.devVoice : "";
+  }
+  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { enVoice = null; fillDevVoices(); };
   function unlockBrowserSpeech() {
     try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; window.speechSynthesis.speak(u); } catch {}
   }
@@ -682,6 +768,7 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     if (code === "not_granted" || code === "unavailable") onDictEnd(code);
     else if (code === "dismissed") { notice("mic", "마이크 허용 창이 닫혔어요. 다시 누르면 다시 물어봐요."); if (session) setPhase(settings.mode === "hands" ? "paused" : "ready"); }
     else if (code === "rate_limited" || code === "upstream_error") onDictEnd(code);
+    else if (code === "no_gesture") { notice("mic", "마이크는 화면을 직접 탭해야 켜져요."); if (session) setPhase(settings.mode === "hands" ? "paused" : "ready"); }
   }
   function startDictation() {
     // Must run synchronously inside the click/keypress.
@@ -756,9 +843,11 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
   function startSession() {
     if (!capsReady) { notice("ai", "아직 연결 중이에요. 잠시 뒤 다시 눌러주세요."); return; }
     if (!S) { notice("ai", "이 화면에서는 Claude와 대화할 수 없어요. claude.ai에서 이 아티팩트를 열어주세요.", true); return; }
-    session = { id: "s" + Date.now(), started: Date.now(), turns: [], scenario: settings.scenario, level: settings.level, mode: settings.mode };
+    session = { id: "s" + Date.now(), started: Date.now(), turns: [], scenario: settings.scenario, level: settings.level, mode: settings.mode, feedback: settings.feedback };
     finalText = ""; partial = ""; accepting = false; speechStart = 0;
     logEl.replaceChildren(); $("#log-sub").textContent = "지금 대화";
+    logEl.classList.toggle("hide-fb", settings.feedback === "end");
+    if (settings.feedback === "end") logEl.append(el("div", "held", "고칠 점은 대화를 끝내면 한 번에 보여드려요"));
     $("#review-wrap").hidden = true;
     $("#settings").open = false;
     notice("mode", null);
@@ -779,6 +868,8 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     accepting = false; finalText = ""; partial = "";
     setPhase("off"); setAiLine("");
     $("#log-sub").textContent = "지난 대화";
+    logEl.classList.remove("hide-fb");
+    logEl.querySelector(".held")?.remove();
     if (review && done.turns.some((t) => t.role === "user")) runReview(done);
   }
 
@@ -810,8 +901,15 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     }
   }
   $("#orb").addEventListener("click", onOrb);
+  // While a session runs, the whole stage is one big tap target (easier than aiming for the button).
+  $(".stage").addEventListener("click", (e) => {
+    if (!session || e.target.closest("button, a, input, select, textarea, summary")) return;
+    onOrb();
+  });
   document.addEventListener("keydown", (e) => {
-    if (e.code !== "Space" || e.repeat) return;
+    const isTrigger = e.code === "Space" || e.key === "Enter" || e.key === "MediaPlayPause" || e.key === "MediaTrackNext";
+    if (!isTrigger || e.repeat) return;
+    if (e.key === "Enter" && !session) return;
     const tag = document.activeElement?.tagName;
     if (tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT" || tag === "BUTTON" || tag === "SUMMARY") return;
     e.preventDefault(); onOrb();
@@ -884,6 +982,8 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
       expressions: (Array.isArray(r?.expressions) ? r.expressions : []).map((x) => ({ en: str(x?.en, 120), ko: str(x?.ko, 120) })).filter((x) => x.en).slice(0, 8),
       next_ko: str(r?.next_ko, 300),
       transcript: done.turns.map((t) => ({ r: t.role === "user" ? "L" : "AI", t: t.content.slice(0, 2000) })).slice(-80),
+      feedback: done.feedback,
+      turnTips: done.turns.filter((t) => t.role === "user" && t.tip).map((t) => ({ said: t.tip.said, better: t.tip.better, why_ko: t.tip.why_ko })).slice(-40),
     };
     box.replaceChildren(noteBody(note, true));
     $("#review-sub").textContent = "저장 중…";
@@ -898,10 +998,9 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
     c.append(s);
     if (n.summary_ko) c.append(el("p", null, n.summary_ko));
     if (n.strengths?.length) { c.append(el("h3", null, "잘한 점")); const ul = el("ul"); for (const x of n.strengths) ul.append(el("li", null, x)); c.append(ul); }
-    if (n.fixes?.length) {
-      c.append(el("h3", null, "이렇게 말해보세요"));
+    const fixList = (items) => {
       const list = el("div");
-      for (const f of n.fixes) {
+      for (const f of items) {
         const row = el("div", "fix");
         if (f.said) row.append(el("div", "said muted", f.said));
         const b = el("div", "better", f.better); b.style.fontFamily = "var(--f-display)"; b.style.fontWeight = "600"; row.append(b);
@@ -909,7 +1008,14 @@ input[type="range"] { width: 100%; accent-color: var(--sign); }
         const l = el("button", "mini", "듣고 따라 말하기"); l.type = "button"; l.style.alignSelf = "flex-start"; l.onclick = () => sayAside(f.better); row.append(l);
         list.append(row);
       }
-      c.append(list);
+      return list;
+    };
+    if (n.fixes?.length) { c.append(el("h3", null, "핵심 교정 · 이렇게 말해보세요")); c.append(fixList(n.fixes)); }
+    if (n.turnTips?.length) {
+      const d = el("details"); d.open = n.feedback === "end";
+      const s = el("summary"); s.append(el("h3", null, `대화 중 고칠 점 전체 (${n.turnTips.length})`)); s.style.cursor = "pointer"; d.append(s);
+      d.append(fixList(n.turnTips));
+      c.append(d);
     }
     if (n.expressions?.length) { c.append(el("h3", null, "다음에 써볼 표현")); c.append(exprNodes(n.expressions)); }
     if (n.next_ko) { const p = el("p", "muted", "다음 연습: " + n.next_ko); c.append(p); }
