@@ -1,0 +1,988 @@
+<title>Open Road English</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&family=Overpass+Mono:wght@500&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one column "dashboard" — the talk dial is the instrument, settings and the log sit below it like a glovebox. */
+:root {
+  --bg: #EDF1EE;
+  --surface: #FFFFFF;
+  --surface-2: #E3E9E5;
+  --ink: #14201B;
+  --muted: #56665F;
+  --line: #CFD9D3;
+  --sign: #0A6B4A;          /* highway-sign green */
+  --sign-ink: #FFFFFF;
+  --lane: #B07A00;          /* lane-line amber: listening */
+  --think: #2F5FB3;
+  --danger: #B3261E;
+  --tip-bg: #FFF6DD;
+  --tip-line: #E8CF86;
+  --f-display: "Overpass", "Noto Sans KR", system-ui, sans-serif;
+  --f-body: "Noto Sans KR", "Overpass", system-ui, sans-serif;
+  --f-mono: "Overpass Mono", ui-monospace, Menlo, monospace;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D1311; --surface: #151D1A; --surface-2: #1C2622; --ink: #E7EEEA; --muted: #93A49C;
+    --line: #27332E; --sign: #2FA77A; --sign-ink: #03130C; --lane: #F2B935; --think: #84A9F2;
+    --danger: #F2827A; --tip-bg: #2A2414; --tip-line: #5B4B1E; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D1311; --surface: #151D1A; --surface-2: #1C2622; --ink: #E7EEEA; --muted: #93A49C;
+  --line: #27332E; --sign: #2FA77A; --sign-ink: #03130C; --lane: #F2B935; --think: #84A9F2;
+  --danger: #F2827A; --tip-bg: #2A2414; --tip-line: #5B4B1E; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 48px;
+}
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--lane); outline-offset: 2px;
+}
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+
+/* Header */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.shield {
+  background: var(--sign); color: var(--sign-ink); font-family: var(--f-display); font-weight: 800;
+  border-radius: 8px; padding: 4px 10px 2px; font-size: 13px; letter-spacing: .08em; border: 2px solid var(--sign-ink);
+  box-shadow: 0 0 0 2px var(--sign);
+}
+.brand h1 { font-size: 21px; font-weight: 800; letter-spacing: -.01em; }
+.caps { display: flex; gap: 6px; flex-wrap: wrap; }
+.cap { font-size: 12px; padding: 3px 9px; border-radius: 99px; background: var(--surface-2); color: var(--muted); }
+.cap[data-ok="1"] { color: var(--sign); }
+.cap[data-ok="0"] { color: var(--danger); }
+
+.notice { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--lane); border-radius: 10px; padding: 10px 14px; font-size: 14px; }
+.notice.err { border-left-color: var(--danger); }
+
+/* Stage */
+.stage {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+  padding: 22px 18px 18px; display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+.orb {
+  --c: var(--sign);
+  width: min(62vw, 230px); aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 0; padding: 0;
+  background: var(--surface-2); position: relative; display: grid; place-items: center;
+  transition: transform .15s ease;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.orb:active { transform: scale(.97); }
+.orb svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.orb .track { fill: none; stroke: var(--line); stroke-width: 7; }
+.orb .ring { fill: none; stroke: var(--c); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 289; stroke-dashoffset: 0; }
+.orb.counting .ring { animation: drain var(--pause, 4000ms) linear forwards; }
+@keyframes drain { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 289; } }
+.orb .core {
+  width: 74%; aspect-ratio: 1; border-radius: 50%; background: var(--c); color: var(--sign-ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center; padding: 10px;
+}
+.orb .big { font-family: var(--f-display); font-weight: 800; font-size: 22px; line-height: 1.1; }
+.orb .small { font-size: 12.5px; opacity: .9; line-height: 1.3; }
+.orb[data-phase="listening"] { --c: var(--lane); }
+.orb[data-phase="thinking"], .orb[data-phase="opening"] { --c: var(--think); }
+.orb[data-phase="speaking"] { --c: var(--sign); }
+.orb[data-phase="paused"], .orb[data-phase="error"] { --c: var(--danger); }
+.orb[data-phase="listening"] .core { animation: breathe 1.8s ease-in-out infinite; }
+.orb[data-phase="thinking"] .core, .orb[data-phase="opening"] .core { animation: breathe 0.9s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(.95); } }
+@media (prefers-reduced-motion: reduce) {
+  .orb .core { animation: none !important; }
+  .orb.counting .ring { animation-duration: 0s; }
+}
+
+.live { width: 100%; min-height: 3.2em; text-align: center; font-family: var(--f-display); font-size: 20px; line-height: 1.4; overflow-wrap: anywhere; }
+.live .partial { color: var(--muted); }
+.live .placeholder { color: var(--muted); font-size: 15px; font-family: var(--f-body); }
+.ai-line { width: 100%; text-align: center; color: var(--muted); font-size: 15px; min-height: 1.4em; }
+.ai-line b { color: var(--ink); font-weight: 600; font-family: var(--f-display); font-size: 17px; }
+
+.row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 9px 14px; font-size: 14px; font-weight: 500;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--sign); color: var(--sign-ink); border-color: var(--sign); font-weight: 700; }
+.btn.ghost { background: transparent; }
+.btn:disabled { opacity: .45; cursor: default; }
+
+.stats { display: flex; gap: 6px 16px; flex-wrap: wrap; justify-content: center; font-size: 12.5px; color: var(--muted); }
+.stats b { font-family: var(--f-mono); font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; font-size: 14px; }
+
+/* Settings */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.panel > summary { list-style: none; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; gap: 12px; cursor: pointer; }
+.panel > summary::-webkit-details-marker { display: none; }
+.panel > summary h2 { font-size: 16px; font-weight: 800; white-space: nowrap; }
+.panel > summary .sum { color: var(--muted); font-size: 13px; text-align: right; min-width: 0; }
+.panel-body { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 16px; }
+.field { display: flex; flex-direction: column; gap: 7px; }
+.label { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.label span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 99px; padding: 6px 12px; font-size: 13.5px;
+}
+.chip[aria-pressed="true"] { background: var(--sign); color: var(--sign-ink); border-color: var(--sign); font-weight: 600; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: var(--surface); padding: 8px 6px; font-size: 13.5px; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); font-weight: 600; }
+.mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 480px) { .mode-cards { grid-template-columns: 1fr; } }
+.mode-card { text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 3px; }
+.mode-card b { font-family: var(--f-display); font-size: 15px; }
+.mode-card span { font-size: 12.5px; color: var(--muted); }
+.mode-card[aria-pressed="true"] { border: 2px solid var(--sign); padding: 9px 11px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+.toggle { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; }
+.toggle input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--sign); flex: none; }
+.toggle small { display: block; color: var(--muted); font-size: 12.5px; }
+input[type="text"], select, textarea {
+  font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; width: 100%;
+}
+input[type="range"] { width: 100%; accent-color: var(--sign); }
+
+/* Log */
+.section-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.section-h h2 { font-size: 17px; font-weight: 800; }
+.section-h small { color: var(--muted); }
+.log { display: flex; flex-direction: column; gap: 10px; }
+.turn { display: flex; flex-direction: column; gap: 6px; max-width: 88%; min-width: 0; }
+.turn.me { align-self: flex-end; align-items: flex-end; }
+.turn.ai { align-self: flex-start; }
+.bubble { padding: 9px 13px; border-radius: 14px; overflow-wrap: anywhere; }
+.me .bubble { background: var(--sign); color: var(--sign-ink); border-bottom-right-radius: 4px; }
+.ai .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; font-family: var(--f-display); font-size: 16px; }
+.meta { font-size: 11.5px; color: var(--muted); display: flex; gap: 8px; align-items: center; font-family: var(--f-mono); }
+.mini { border: 0; background: none; color: var(--sign); font-size: 12.5px; padding: 0; font-family: var(--f-body); font-weight: 600; }
+.tip { background: var(--tip-bg); border: 1px solid var(--tip-line); border-radius: 10px; padding: 8px 12px; font-size: 13.5px; max-width: 100%; text-align: left; }
+.tip .said { text-decoration: line-through; text-decoration-color: var(--danger); color: var(--muted); }
+.tip .better { font-family: var(--f-display); font-weight: 600; font-size: 15px; }
+.tip .why { color: var(--muted); font-size: 12.5px; }
+.exprs { display: flex; flex-wrap: wrap; gap: 6px; }
+.expr { font-size: 12.5px; border: 1px dashed var(--line); border-radius: 8px; padding: 3px 8px; background: var(--surface); text-align: left; }
+.expr b { font-family: var(--f-display); font-weight: 600; }
+.example-tag { align-self: center; font-size: 12px; color: var(--muted); background: var(--surface-2); padding: 2px 10px; border-radius: 99px; }
+
+.typebox { display: flex; gap: 8px; align-items: flex-end; }
+.typebox textarea { min-height: 44px; max-height: 160px; resize: vertical; }
+
+/* Review & notebook */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.card h3 { font-size: 15px; font-weight: 800; }
+.card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px; }
+.fix { display: flex; flex-direction: column; gap: 1px; padding: 8px 0; border-top: 1px solid var(--line); }
+.fix:first-child { border-top: 0; }
+.notes { display: flex; flex-direction: column; gap: 8px; }
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+.note > summary { padding: 11px 14px; cursor: pointer; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; list-style: none; }
+.note > summary::-webkit-details-marker { display: none; }
+.note > summary .when { color: var(--muted); font-size: 12.5px; font-family: var(--f-mono); }
+.note .body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.empty { color: var(--muted); font-size: 14px; padding: 14px; border: 1px dashed var(--line); border-radius: 12px; text-align: center; }
+.muted { color: var(--muted); }
+.safety { font-size: 12.5px; color: var(--muted); text-align: center; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <span class="shield" aria-hidden="true">ENG</span>
+      <h1>Open Road English</h1>
+    </div>
+    <div class="caps" aria-label="기능 상태">
+      <span class="cap" id="cap-mic">마이크 확인 중</span>
+      <span class="cap" id="cap-ai">Claude 확인 중</span>
+      <span class="cap" id="cap-voice">음성 확인 중</span>
+    </div>
+  </header>
+
+  <div id="notices" class="wrap" style="gap:8px"></div>
+
+  <section class="stage" aria-label="대화">
+    <button class="orb" id="orb" data-phase="off" aria-live="polite">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><circle class="track" cx="50" cy="50" r="46"></circle><circle class="ring" cx="50" cy="50" r="46"></circle></svg>
+      <span class="core"><span class="big" id="orb-big">Start</span><span class="small" id="orb-small">눌러서 대화 시작</span></span>
+    </button>
+    <div class="live" id="live"><span class="placeholder">길게 말해도 끊지 않아요. 생각하며 잠깐 멈춰도 괜찮아요.</span></div>
+    <div class="ai-line" id="ai-line"></div>
+    <div class="stats" id="stats" hidden>
+      <span>내 발화 <b id="st-words">0</b> 단어</span>
+      <span>최장 턴 <b id="st-long">0</b> 단어</span>
+      <span>말하기 비율 <b id="st-share">0%</b></span>
+      <span>속도 <b id="st-wpm">–</b> wpm</span>
+    </div>
+    <div class="row" id="controls">
+      <button class="btn" id="btn-send" hidden>지금 보내기</button>
+      <button class="btn" id="btn-clear" hidden>다시 말하기</button>
+      <button class="btn" id="btn-lang" hidden>마이크: English</button>
+      <button class="btn primary" id="btn-end" hidden>끝내고 복습</button>
+    </div>
+    <p class="safety" id="safety">운전 중엔 화면을 보지 마세요. 핸즈프리 모드는 말만으로 대화가 이어지고, 교정은 음성과 복습 노트로 받아요.</p>
+  </section>
+
+  <details class="panel" id="settings" open>
+    <summary><h2>연습 설정</h2><span class="sum" id="settings-sum"></span></summary>
+    <div class="panel-body">
+      <div class="field">
+        <span class="label">상황</span>
+        <div class="chips" id="scenarios"></div>
+        <input type="text" id="custom-topic" placeholder="직접 정한 주제 (예: 주말에 본 영화, 회사 회의 준비)" hidden>
+      </div>
+      <div class="field">
+        <span class="label">대화 방식</span>
+        <div class="mode-cards" id="modes">
+          <button class="mode-card" data-mode="hands"><b>핸즈프리 · 운전용</b><span>한 번 누르면 계속 들어요. 말을 멈추면 자동 전송되고, 답은 기기 음성으로 읽어줘요.</span></button>
+          <button class="mode-card" data-mode="tap"><b>탭 대화 · Claude 음성</b><span>내 차례마다 버튼을 한 번 눌러 말해요. 더 자연스러운 Claude 목소리.</span></button>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <span class="label">레벨</span>
+          <div class="seg" id="levels">
+            <button data-level="beg">초급</button><button data-level="mid">중급</button><button data-level="adv">고급</button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="label">자동 전송 <span>— 이만큼 조용하면 보내요</span></span>
+          <div class="seg" id="pauses">
+            <button data-pause="2500">2.5초</button><button data-pause="4000">4초</button><button data-pause="6000">6초</button><button data-pause="10000">10초</button><button data-pause="0">탭만</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label class="label" for="rate">말하기 속도 <span id="rate-val"></span></label>
+          <input type="range" id="rate" min="0.7" max="1.3" step="0.05">
+        </div>
+        <div class="field">
+          <label class="label" for="voice">Claude 목소리 <span>(탭 대화)</span></label>
+          <select id="voice">
+            <option value="buttery">Buttery</option><option value="airy">Airy</option><option value="glassy">Glassy</option><option value="rounded">Rounded</option>
+          </select>
+        </div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="spoken-fix"><span>대화 중에 자연스럽게 고쳐 말해주기<small>AI가 답하면서 틀린 표현을 맞게 바꿔 다시 말해줘요. 끄면 교정은 화면과 복습 노트에만 나와요.</small></span></label>
+      <label class="toggle"><input type="checkbox" id="over-word"><span>“Over”라고 말하면 바로 보내기<small>문장 끝에 over라고 하면 기다리지 않고 전송해요. 무전기처럼.</small></span></label>
+    </div>
+  </details>
+
+  <section class="wrap" style="gap:10px" aria-label="대화 기록">
+    <div class="section-h"><h2>대화 기록</h2><small id="log-sub">예시 대화</small></div>
+    <div class="log" id="log"></div>
+    <form class="typebox" id="typebox">
+      <textarea id="typed" rows="1" placeholder="입력해서 말하기 (키보드 받아쓰기도 가능)"></textarea>
+      <button class="btn primary" type="submit">보내기</button>
+    </form>
+  </section>
+
+  <section id="review-wrap" class="wrap" style="gap:10px" hidden aria-label="복습">
+    <div class="section-h"><h2>이번 대화 복습</h2><small id="review-sub"></small></div>
+    <div id="review"></div>
+  </section>
+
+  <section class="wrap" style="gap:10px" aria-label="복습 노트">
+    <div class="section-h"><h2>복습 노트</h2><small id="notes-sub"></small></div>
+    <div class="notes" id="notes"><div class="empty">대화를 끝내고 복습을 받으면 여기에 쌓여요. 고친 문장과 표현을 다시 듣고 따라 말할 수 있어요.</div></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- helpers ----------
+  const $ = (s) => document.querySelector(s);
+  function el(tag, cls, text) {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  const words = (t) => (t.trim().match(/[A-Za-z0-9'’-]+|[ㄱ-힝]+/g) || []).length;
+  const str = (v, max = 600) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+  // ---------- settings ----------
+  const SCENARIOS = [
+    { id: "drive", ko: "운전 중 수다", brief: "You are the learner's friend riding in the passenger seat during their drive or commute. Chat about where they're going, their day, plans, music, the weekend, things you might pass on the road." },
+    { id: "daily", ko: "오늘 하루", brief: "Casual daily-life chat: what they did today, food, family, hobbies, plans for tonight and the weekend." },
+    { id: "free", ko: "자유 대화", brief: "Free conversation about whatever the learner brings up. Follow their lead." },
+    { id: "work", ko: "직장 스몰토크", brief: "Small talk with a friendly coworker: projects, meetings, weekend plans, office life." },
+    { id: "cafe", ko: "카페·식당", brief: "Role-play: you are staff at a café or restaurant and the learner is a customer ordering, asking questions and making small talk." },
+    { id: "travel", ko: "여행", brief: "Role-play travel situations: airport check-in, hotel front desk, asking a local for directions and recommendations. Play the relevant person." },
+    { id: "interview", ko: "영어 면접", brief: "Role-play a friendly job interview. Ask common interview questions one at a time and follow up on their answers." },
+    { id: "opinion", ko: "의견 말하기", brief: "Discuss opinions on everyday topics (technology, movies, city life, work culture). Ask for reasons and examples." },
+    { id: "custom", ko: "직접 정하기", brief: "" },
+  ];
+  const LEVELS = {
+    beg: { ko: "초급", desc: "Beginner (A2). Use short, simple sentences and very common words.", len: "1 to 2 short sentences" },
+    mid: { ko: "중급", desc: "Intermediate (B1-B2). Natural everyday English with an occasional useful idiom.", len: "2 to 3 sentences" },
+    adv: { ko: "고급", desc: "Advanced (C1). Native-like English with idioms and phrasal verbs; ask deeper follow-ups.", len: "2 to 4 sentences" },
+  };
+  const DEFAULTS = { scenario: "drive", custom: "", mode: "hands", level: "mid", pause: 4000, rate: 0.95, voice: "buttery", spokenFix: true, overWord: false, lang: "en" };
+  let settings = { ...DEFAULTS };
+  try { Object.assign(settings, JSON.parse(localStorage.getItem("ore-settings") || "{}")); } catch {}
+  function saveSettings() { try { localStorage.setItem("ore-settings", JSON.stringify(settings)); } catch {} renderSettings(); }
+
+  // ---------- capabilities ----------
+  let D = null, S = null, T = null, DB = null, U = null, uid = null;
+  let capsReady = false, micBlocked = false, ttsBlocked = false;
+
+  // ---------- session state ----------
+  let session = null;               // {id, started, turns:[{role, content, words, ms, tip, exprs}], scenario, level}
+  let phase = "off";                // off | opening | ready | listening | finishing | thinking | speaking | paused | error
+  let finalText = "", partial = "", accepting = false, ignoreUntil = 0, speechStart = 0;
+  let silTimer = null, ctl = null, speakToken = 0, wakeLock = null, pendingTyped = null;
+
+  // ---------- notices ----------
+  const noticeBox = $("#notices");
+  function notice(key, text, isErr) {
+    let n = noticeBox.querySelector(`[data-key="${key}"]`);
+    if (!text) { n?.remove(); return; }
+    if (!n) { n = el("div", "notice"); n.dataset.key = key; noticeBox.append(n); }
+    n.classList.toggle("err", !!isErr);
+    n.textContent = text;
+  }
+
+  // ---------- settings UI ----------
+  function renderSettings() {
+    const sc = $("#scenarios");
+    if (!sc.children.length) {
+      for (const s of SCENARIOS) {
+        const b = el("button", "chip", s.ko); b.dataset.id = s.id; b.type = "button";
+        b.onclick = () => { settings.scenario = s.id; saveSettings(); if (s.id === "custom") $("#custom-topic").focus(); };
+        sc.append(b);
+      }
+    }
+    for (const b of sc.children) b.setAttribute("aria-pressed", String(b.dataset.id === settings.scenario));
+    const ct = $("#custom-topic"); ct.hidden = settings.scenario !== "custom"; if (document.activeElement !== ct) ct.value = settings.custom;
+    for (const b of document.querySelectorAll("#modes .mode-card")) b.setAttribute("aria-pressed", String(b.dataset.mode === settings.mode));
+    for (const b of document.querySelectorAll("#levels button")) b.setAttribute("aria-pressed", String(b.dataset.level === settings.level));
+    for (const b of document.querySelectorAll("#pauses button")) b.setAttribute("aria-pressed", String(Number(b.dataset.pause) === settings.pause));
+    $("#rate").value = settings.rate; $("#rate-val").textContent = "× " + Number(settings.rate).toFixed(2);
+    $("#voice").value = settings.voice;
+    $("#spoken-fix").checked = settings.spokenFix;
+    $("#over-word").checked = settings.overWord;
+    const scn = SCENARIOS.find((s) => s.id === settings.scenario);
+    const p = settings.pause ? (settings.pause / 1000) + "초 멈추면 전송" : "탭으로 전송";
+    $("#settings-sum").textContent = `${scn.ko} · ${LEVELS[settings.level].ko} · ${settings.mode === "hands" ? "핸즈프리" : "탭 대화"} · ${p}`;
+    $("#btn-lang").textContent = settings.lang === "ko" ? "마이크: 한국어" : "마이크: English";
+    $("#orb").style.setProperty("--pause", (settings.pause || 4000) + "ms");
+    renderOrb();
+  }
+  $("#custom-topic").addEventListener("input", (e) => { settings.custom = e.target.value.slice(0, 200); try { localStorage.setItem("ore-settings", JSON.stringify(settings)); } catch {} });
+  for (const b of document.querySelectorAll("#modes .mode-card")) b.onclick = () => { if (session) return notice("mode", "대화 방식은 지금 대화를 끝낸 뒤 바꿀 수 있어요."); settings.mode = b.dataset.mode; saveSettings(); };
+  for (const b of document.querySelectorAll("#levels button")) b.onclick = () => { settings.level = b.dataset.level; saveSettings(); };
+  for (const b of document.querySelectorAll("#pauses button")) b.onclick = () => { settings.pause = Number(b.dataset.pause); saveSettings(); };
+  $("#rate").oninput = (e) => { settings.rate = Number(e.target.value); T?.setRate?.(settings.rate); saveSettings(); };
+  $("#voice").onchange = (e) => { settings.voice = e.target.value; saveSettings(); };
+  $("#spoken-fix").onchange = (e) => { settings.spokenFix = e.target.checked; saveSettings(); };
+  $("#over-word").onchange = (e) => { settings.overWord = e.target.checked; saveSettings(); };
+
+  // ---------- orb / stage rendering ----------
+  const ORB_TEXT = {
+    off: ["Start", "눌러서 대화 시작"],
+    opening: ["Ready…", "대화 상대가 인사를 준비 중"],
+    ready: ["Talk", "눌러서 말하기"],
+    listening: ["Listening", ""],
+    finishing: ["Sending", "마지막 말을 받는 중"],
+    thinking: ["Thinking", "답을 생각하는 중"],
+    speaking: ["Speaking", "누르면 끊고 바로 말하기"],
+    paused: ["Paused", "눌러서 다시 듣기"],
+    error: ["Retry", "눌러서 다시 시도"],
+  };
+  function renderOrb() {
+    const orb = $("#orb");
+    orb.dataset.phase = phase;
+    let [big, small] = ORB_TEXT[phase] || ORB_TEXT.off;
+    if (phase === "listening") {
+      if (settings.mode === "hands") small = settings.pause ? `멈추면 ${settings.pause / 1000}초 뒤 전송` : "다 말하면 눌러서 전송";
+      else small = settings.pause ? `다 말하면 탭 · ${settings.pause / 1000}초 멈춰도 전송` : "다 말하면 눌러서 전송";
+    }
+    if (phase === "speaking" && settings.mode === "hands") small = "누르면 끊기";
+    $("#orb-big").textContent = big; $("#orb-small").textContent = small;
+    if (phase !== "listening") orb.classList.remove("counting");
+    const live = !!session;
+    $("#btn-send").hidden = !(live && phase === "listening");
+    $("#btn-clear").hidden = !(live && phase === "listening");
+    $("#btn-lang").hidden = !(live && D && !micBlocked);
+    $("#btn-end").hidden = !live;
+    $("#stats").hidden = !live;
+    $("#safety").hidden = live && settings.mode === "tap";
+  }
+  function renderLive() {
+    const live = $("#live"); live.replaceChildren();
+    const f = finalText.trim(), p = partial.trim();
+    if (!f && !p) {
+      let msg = "길게 말해도 끊지 않아요. 생각하며 잠깐 멈춰도 괜찮아요.";
+      if (phase === "listening") msg = "듣고 있어요. 편하게 길게 말해보세요.";
+      live.append(el("span", "placeholder", msg));
+      return;
+    }
+    if (f) live.append(document.createTextNode(f + " "));
+    if (p) live.append(el("span", "partial", p));
+  }
+  function setAiLine(text, label) {
+    const a = $("#ai-line"); a.replaceChildren();
+    if (!text) return;
+    if (label) a.append(el("span", null, label + " "));
+    a.append(el("b", null, text));
+  }
+  function restartCountdown() {
+    const orb = $("#orb");
+    orb.classList.remove("counting");
+    if (!settings.pause || phase !== "listening") return;
+    void orb.offsetWidth; // restart the CSS animation
+    orb.classList.add("counting");
+  }
+  function setPhase(p) { phase = p; renderOrb(); renderLive(); }
+
+  // ---------- stats ----------
+  function renderStats() {
+    if (!session) return;
+    const me = session.turns.filter((t) => t.role === "user");
+    const ai = session.turns.filter((t) => t.role === "assistant");
+    const mw = me.reduce((a, t) => a + t.words, 0), aw = ai.reduce((a, t) => a + t.words, 0);
+    const timed = me.filter((t) => t.ms > 4000);
+    const wpm = timed.length ? Math.round(timed.reduce((a, t) => a + t.words, 0) / (timed.reduce((a, t) => a + t.ms, 0) / 60000)) : null;
+    $("#st-words").textContent = mw;
+    $("#st-long").textContent = me.reduce((a, t) => Math.max(a, t.words), 0);
+    $("#st-share").textContent = mw + aw ? Math.round((mw / (mw + aw)) * 100) + "%" : "0%";
+    $("#st-wpm").textContent = wpm ?? "–";
+  }
+
+  // ---------- log rendering ----------
+  const logEl = $("#log");
+  function tipNode(tip) {
+    const box = el("div", "tip");
+    box.append(el("div", "said", tip.said));
+    const better = el("div", "better", tip.better);
+    box.append(better);
+    if (tip.why_ko) box.append(el("div", "why", tip.why_ko));
+    const r = el("div", "row"); r.style.justifyContent = "flex-start";
+    const listen = el("button", "mini", "듣고 따라 말하기"); listen.type = "button";
+    listen.onclick = () => sayAside(tip.better);
+    r.append(listen); box.append(r);
+    return box;
+  }
+  function exprNodes(exprs) {
+    const w = el("div", "exprs");
+    for (const x of exprs) {
+      const b = el("button", "expr"); b.type = "button"; b.title = "눌러서 듣기";
+      b.append(el("b", null, x.en)); if (x.ko) b.append(document.createTextNode(" · " + x.ko));
+      b.onclick = () => sayAside(x.en);
+      w.append(b);
+    }
+    return w;
+  }
+  function renderTurn(t, example) {
+    const wrap = el("div", "turn " + (t.role === "user" ? "me" : "ai"));
+    wrap.append(el("div", "bubble", t.content));
+    const meta = el("div", "meta");
+    if (t.role === "user") meta.append(el("span", null, `${t.words} words${t.ms > 4000 ? " · " + Math.round(t.ms / 1000) + "s" : ""}`));
+    else {
+      meta.append(el("span", null, "Jamie"));
+      const b = el("button", "mini", "다시 듣기"); b.type = "button"; b.onclick = () => sayAside(t.content); meta.append(b);
+    }
+    wrap.append(meta);
+    if (t.role === "assistant" && t.exprs?.length) wrap.append(exprNodes(t.exprs));
+    t.node = wrap;
+    logEl.append(wrap);
+    if (!example) wrap.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    return wrap;
+  }
+  function attachTip(userTurn, tip) {
+    if (!userTurn?.node || !tip) return;
+    userTurn.tip = tip;
+    userTurn.node.append(tipNode(tip));
+  }
+  function renderExample() {
+    logEl.replaceChildren(el("div", "example-tag", "예시 · 대화를 시작하면 사라져요"));
+    const ex = [
+      { role: "assistant", content: "Hey! Where are you headed this morning?", words: 7 },
+      { role: "user", content: "i'm going to my office but um before that i want to stop by the coffee shop because yesterday i was so tired and i didn't sleep well so i need a big coffee today", words: 38, ms: 16000 },
+      { role: "assistant", content: "Oh no, you didn't sleep well? That's rough. What kept you up last night?", words: 14, exprs: [{ en: "stop by", ko: "잠깐 들르다" }, { en: "That's rough.", ko: "힘들었겠다" }] },
+    ];
+    const nodes = ex.map((t) => ({ ...t, node: renderTurn(t, true) }));
+    attachTip(nodes[1], { said: "yesterday i was so tired and i didn't sleep well", better: "I didn't sleep well last night, so I'm really tired today.", why_ko: "어제 일과 오늘 상태를 연결할 땐 원인 → 결과 순서가 자연스러워요." });
+  }
+
+  // ---------- prompts ----------
+  function rules() {
+    const scn = SCENARIOS.find((s) => s.id === (session?.scenario || settings.scenario));
+    const lv = LEVELS[session?.level || settings.level];
+    const brief = scn.id === "custom" ? `Talk with the learner about this topic they chose: "${str(settings.custom, 200) || "anything"}".` : scn.brief;
+    const lines = [
+      `You are "Jamie", a warm, curious English conversation partner. The learner is a Korean adult practicing SPOKEN English by voice.`,
+      `Scenario: ${brief}`,
+      `Learner level: ${lv.desc}`,
+      ``,
+      `How to talk:`,
+      `- The learner's turns are speech-to-text transcripts. Ignore punctuation, capitalization, filler words and small transcription glitches; never correct those.`,
+      `- The learner's goal is to speak as much as possible. Long answers are great. Respond to the substance of what they said (show you listened by picking up a specific detail), then ask ONE open follow-up question (how / why / what happened / tell me about) that invites another long answer.`,
+      `- Keep your own reply short: ${lv.len}. Plain spoken English only: no lists, markdown, emoji or parentheses. It will be read aloud.`,
+      `- If the learner's turn is very short, encourage them to say more with a specific, easy question.`,
+      `- If they speak Korean or ask how to say something, give the natural English phrase, then invite them to try it in their own sentence.`,
+      settings.spokenFix
+        ? `- If they made a clear grammar or word-choice mistake, weave a quick natural recast into the start of your reply (for example: "Oh, you went there last week? ..."), without lecturing or saying "you made a mistake".`
+        : `- Do not correct the learner inside "reply"; corrections go only in "tip".`,
+      scn.id === "drive" ? `- The learner is driving right now. Never ask them to look at, read or write anything. If they mention traffic or needing to focus, say something brief and calm and let them come back when ready.` : ``,
+      ``,
+      `Reply with only a JSON object, no other text:`,
+      `{"reply": "what you say aloud", "tip": null or {"said": "short exact quote of the learner's words", "better": "a more natural or correct way to say it", "why_ko": "한국어 한 문장 설명"}, "expressions": [{"en": "useful English phrase", "ko": "한국어 뜻"}]}`,
+      `- "tip": the single most useful correction or more natural phrasing from the learner's LATEST turn. null if their English was fine or there is no learner turn yet.`,
+      `- "expressions": 0 to 2 phrases worth learning from this exchange (often from your reply, or what the learner was trying to say).`,
+      ``,
+      `Start the conversation now: greet the learner briefly and ask an easy opening question that fits the scenario.`,
+    ];
+    return lines.filter((l, i) => l !== "" || lines[i - 1] !== "").join("\n");
+  }
+  function buildInput() {
+    const hist = session.turns.slice(-30).map((t) => ({ role: t.role, content: t.content }));
+    while (hist.length && hist[0].role === "assistant" && session.turns.length > 30) hist.shift();
+    return [{ role: "user", content: rules() }, ...hist];
+  }
+
+  // ---------- speech out ----------
+  let enVoice = null;
+  function pickVoice() {
+    const ss = window.speechSynthesis; if (!ss) return null;
+    if (enVoice) return enVoice;
+    const vs = ss.getVoices().filter((v) => /^en[-_]/i.test(v.lang));
+    enVoice = vs.find((v) => /en[-_]US/i.test(v.lang) && /Google|Natural|Samantha|Aria|Jenny/i.test(v.name)) || vs.find((v) => /en[-_]US/i.test(v.lang)) || vs[0] || null;
+    return enVoice;
+  }
+  if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = () => { enVoice = null; pickVoice(); };
+  function unlockBrowserSpeech() {
+    try { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; window.speechSynthesis.speak(u); } catch {}
+  }
+  function speakBrowser(text) {
+    return new Promise((resolve) => {
+      const ss = window.speechSynthesis;
+      if (!ss) return resolve(false);
+      try { ss.cancel(); } catch {}
+      // Chrome stops long utterances after ~15 s, so speak sentence by sentence.
+      const parts = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+      let left = parts.length, done = false;
+      const finish = () => { if (!done) { done = true; clearTimeout(guard); resolve(true); } };
+      const guard = setTimeout(finish, 6000 + text.length * 110 / settings.rate);
+      for (const p of parts) {
+        const u = new SpeechSynthesisUtterance(p.trim());
+        u.lang = "en-US"; u.rate = settings.rate; const v = pickVoice(); if (v) u.voice = v;
+        u.onend = u.onerror = () => { if (--left <= 0) finish(); };
+        ss.speak(u);
+      }
+      speakBrowser.cancel = () => { try { ss.cancel(); } catch {} finish(); };
+    });
+  }
+  function useClaudeVoice() { return settings.mode === "tap" && T && !ttsBlocked; }
+  async function speakReply(text) {
+    const token = ++speakToken;
+    setPhase("speaking");
+    if (useClaudeVoice()) {
+      try { await T.speak(text, { voice: settings.voice, rate: settings.rate, language: "en" }); }
+      catch (e) {
+        if (e?.code === "not_granted") { ttsBlocked = true; notice("tts", "Claude 음성이 꺼져 있어요. 아티팩트 권한 메뉴에서 켜면 다시 읽어줘요. 지금은 화면 글로 보여드려요."); renderCaps(); }
+        else if (e?.code === "rate_limited") notice("tts", "음성 사용량이 잠시 한도에 닿았어요. 답은 화면에서 확인하세요.");
+      }
+    } else if (settings.mode === "hands" || !ttsBlocked) {
+      await speakBrowser(text);
+    }
+    if (token !== speakToken || !session || phase !== "speaking") return;
+    afterSpeak();
+  }
+  function afterSpeak() {
+    if (settings.mode === "hands") {
+      finalText = ""; partial = ""; speechStart = 0;
+      ignoreUntil = Date.now() + 1200; // let the last echo of the voice die out
+      accepting = true;
+      setPhase(D && D.active() ? "listening" : (D && !micBlocked ? "paused" : "ready"));
+    } else {
+      setPhase("ready");
+    }
+    // A message typed before the session started goes out right after the greeting.
+    if (pendingTyped && session) { const t = pendingTyped; pendingTyped = null; accepting = false; addUserTurn(t, 0); askAI(); }
+  }
+  function stopSpeaking() {
+    speakToken++;
+    try { T?.stop().catch(() => {}); } catch {}
+    try { speakBrowser.cancel?.(); window.speechSynthesis?.cancel(); } catch {}
+  }
+  // Replay a phrase from the log (not during listening in hands-free: the mic would hear it).
+  function sayAside(text) {
+    if (session && settings.mode === "hands" && phase === "listening") { ignoreUntil = Date.now() + 2500 + text.length * 90; }
+    if (T && !ttsBlocked && !(D && D.active())) {
+      T.speak(text, { voice: settings.voice, rate: Math.min(settings.rate, 0.9), language: "en" }).catch((e) => { if (e?.code === "not_granted") { ttsBlocked = true; renderCaps(); } });
+    } else if (!ttsBlocked || !T) {
+      const ss = window.speechSynthesis; if (!ss) return;
+      const u = new SpeechSynthesisUtterance(text); u.lang = "en-US"; u.rate = Math.min(settings.rate, 0.9); const v = pickVoice(); if (v) u.voice = v;
+      ss.cancel(); ss.speak(u);
+    }
+  }
+
+  // ---------- speech in ----------
+  function currentText() { return (finalText + " " + partial).replace(/\s+/g, " ").trim(); }
+  function ignoring() { return !session || !accepting || Date.now() < ignoreUntil; }
+  function heard() {
+    if (!speechStart) speechStart = Date.now();
+    clearTimeout(silTimer);
+    if (settings.pause && phase === "listening") silTimer = setTimeout(onSilence, settings.pause);
+    restartCountdown();
+  }
+  function onSilence() {
+    if (phase !== "listening") return;
+    if (!currentText()) return;
+    commitTurn();
+  }
+  function checkOverWord() {
+    if (!settings.overWord) return;
+    const m = finalText.match(/[\s,]*\bover(\s+and\s+out)?[\s.!?,]*$/i);
+    if (m && finalText.trim().split(/\s+/).length > 1) { finalText = finalText.slice(0, m.index); commitTurn(); }
+  }
+  function wireDictation() {
+    D.onPartial(({ text }) => { if (ignoring()) return; partial = text || ""; if (partial) heard(); renderLive(); });
+    D.onFinal(({ text }) => { if (ignoring()) return; finalText += text || ""; partial = ""; heard(); renderLive(); checkOverWord(); });
+    D.onState(({ state, reason }) => { if (state === "idle" && reason) onDictEnd(reason); renderOrb(); });
+  }
+  function onDictEnd(reason) {
+    if (reason === "stopped") return;
+    if (reason === "not_granted") { micBlocked = true; notice("mic", "마이크가 허용되지 않았어요. 아티팩트의 권한 메뉴에서 받아쓰기를 켜거나, 아래 입력창으로 대화하세요.", true); renderCaps(); }
+    else if (reason === "unavailable") { micBlocked = true; notice("mic", "이 계정이나 언어에서는 음성 입력을 쓸 수 없어요. 아래 입력창으로 대화하세요.", true); renderCaps(); }
+    else if (reason === "rate_limited") notice("mic", "음성 입력이 잠시 바빠요. 조금 뒤 다시 눌러주세요.");
+    else if (reason === "upstream_error") notice("mic", "마이크나 음성 인식에 문제가 생겼어요. 다시 눌러 시작하세요.");
+    else if (reason === "hidden") notice("mic", "화면이 꺼지거나 다른 앱으로 가면 듣기가 멈춰요. 돌아와서 눌러주세요.");
+    if (!session) return;
+    if (phase === "listening" || phase === "finishing") {
+      if (settings.mode === "tap") { if (currentText()) commitTurn(); else setPhase("ready"); }
+      else if (currentText() && reason === "viewer_stopped") commitTurn();
+      else setPhase(micBlocked ? "ready" : "paused");
+    } else if (settings.mode === "hands" && phase !== "off") {
+      // mic dropped while the AI was thinking/speaking: come back paused after it finishes
+      if (phase === "ready") setPhase(micBlocked ? "ready" : "paused");
+    }
+  }
+  function dictError(e) {
+    const code = e?.code;
+    if (code === "not_granted" || code === "unavailable") onDictEnd(code);
+    else if (code === "dismissed") { notice("mic", "마이크 허용 창이 닫혔어요. 다시 누르면 다시 물어봐요."); if (session) setPhase(settings.mode === "hands" ? "paused" : "ready"); }
+    else if (code === "rate_limited" || code === "upstream_error") onDictEnd(code);
+  }
+  function startDictation() {
+    // Must run synchronously inside the click/keypress.
+    if (!D || micBlocked) return false;
+    notice("mic", null);
+    D.start({ language: settings.lang }).catch(dictError);
+    return true;
+  }
+
+  // ---------- turns ----------
+  async function commitTurn() {
+    if (phase !== "listening") return;
+    clearTimeout(silTimer);
+    const ms = speechStart ? Date.now() - speechStart : 0;
+    if (settings.mode === "tap" && D && D.active()) {
+      setPhase("finishing");
+      try { await D.stop(); } catch {}
+    }
+    const text = currentText();
+    accepting = false; finalText = ""; partial = ""; speechStart = 0;
+    renderLive();
+    if (!text) { setPhase(settings.mode === "tap" ? "ready" : "listening"); accepting = settings.mode === "hands"; return; }
+    addUserTurn(text, ms);
+    await askAI();
+  }
+  function addUserTurn(text, ms) {
+    const t = { role: "user", content: text, words: words(text), ms: ms || 0 };
+    session.turns.push(t); renderTurn(t); renderStats();
+    setAiLine(text, "나:");
+  }
+  async function askAI() {
+    if (!S) { notice("ai", "이 화면에서는 Claude와 대화할 수 없어요. claude.ai에서 이 아티팩트를 열어주세요.", true); setPhase(session ? "error" : "off"); return; }
+    setPhase(session.turns.length ? "thinking" : "opening");
+    ctl?.abort(); ctl = new AbortController();
+    try {
+      const res = await S.json(buildInput(), { modelTier: "quick", cache: false, signal: ctl.signal });
+      if (!session) return;
+      const reply = str(res?.reply, 1500);
+      if (!reply) throw { code: "empty_completion" };
+      notice("ai", null);
+      const exprs = Array.isArray(res?.expressions) ? res.expressions.slice(0, 2).map((x) => ({ en: str(x?.en, 120), ko: str(x?.ko, 120) })).filter((x) => x.en) : [];
+      const tipRaw = res?.tip && typeof res.tip === "object" ? res.tip : null;
+      const tip = tipRaw && str(tipRaw.better) ? { said: str(tipRaw.said, 300), better: str(tipRaw.better, 300), why_ko: str(tipRaw.why_ko, 300) } : null;
+      const lastUser = [...session.turns].reverse().find((t) => t.role === "user");
+      if (tip && lastUser && !lastUser.tip) attachTip(lastUser, tip);
+      const t = { role: "assistant", content: reply, words: words(reply), exprs };
+      session.turns.push(t); renderTurn(t); renderStats();
+      setAiLine(reply, "Jamie:");
+      await speakReply(reply);
+    } catch (e) {
+      if (!session || e?.code === "cancelled") return;
+      const c = e?.code;
+      const msg = {
+        not_granted: "Claude 사용이 허용되지 않았어요. 다시 시작하면 허용 창이 다시 떠요.",
+        sampling_disabled: "이 계정에서는 Claude를 쓸 수 없어요.",
+        rate_limited: e?.reason === "usage_limit" ? "Claude 사용 한도에 닿았어요. 나중에 다시 해주세요." : "요청이 많아요. 잠시 뒤 버튼을 눌러 다시 시도하세요.",
+        session_expired: "claude.ai 로그인이 만료됐어요. 다시 로그인한 뒤 시도하세요.",
+        refused: "이 내용에는 답할 수 없대요. 다른 말로 이어가 보세요.",
+      }[c] || "답을 받지 못했어요. 버튼을 눌러 다시 시도하세요.";
+      notice("ai", msg, true);
+      if (c === "not_granted" || c === "sampling_disabled") { endSession(false); return; }
+      setPhase("error");
+    }
+  }
+
+  // ---------- session lifecycle ----------
+  async function requestWakeLock() {
+    try { wakeLock = await navigator.wakeLock?.request("screen"); } catch { wakeLock = null; }
+  }
+  document.addEventListener("visibilitychange", () => { if (session && document.visibilityState === "visible") requestWakeLock(); });
+
+  function startSession() {
+    if (!capsReady) { notice("ai", "아직 연결 중이에요. 잠시 뒤 다시 눌러주세요."); return; }
+    if (!S) { notice("ai", "이 화면에서는 Claude와 대화할 수 없어요. claude.ai에서 이 아티팩트를 열어주세요.", true); return; }
+    session = { id: "s" + Date.now(), started: Date.now(), turns: [], scenario: settings.scenario, level: settings.level, mode: settings.mode };
+    finalText = ""; partial = ""; accepting = false; speechStart = 0;
+    logEl.replaceChildren(); $("#log-sub").textContent = "지금 대화";
+    $("#review-wrap").hidden = true;
+    $("#settings").open = false;
+    notice("mode", null);
+    if (settings.mode === "hands") startDictation();
+    if (!useClaudeVoice()) unlockBrowserSpeech();
+    requestWakeLock();
+    renderStats();
+    askAI();
+  }
+  function endSession(review = true) {
+    if (!session) return;
+    const done = session;
+    session = null;
+    ctl?.abort(); clearTimeout(silTimer);
+    stopSpeaking();
+    try { D?.stop().catch(() => {}); } catch {}
+    try { wakeLock?.release(); } catch {} wakeLock = null;
+    accepting = false; finalText = ""; partial = "";
+    setPhase("off"); setAiLine("");
+    $("#log-sub").textContent = "지난 대화";
+    if (review && done.turns.some((t) => t.role === "user")) runReview(done);
+  }
+
+  function onOrb() {
+    if (!session) { startSession(); return; }
+    switch (phase) {
+      case "ready":
+        finalText = ""; partial = ""; speechStart = 0; accepting = true;
+        if (startDictation()) setPhase("listening");
+        else $("#typed").focus();
+        break;
+      case "listening":
+        if (settings.mode === "tap" || currentText()) commitTurn();
+        break;
+      case "speaking":
+        stopSpeaking();
+        if (settings.mode === "tap") {
+          finalText = ""; partial = ""; speechStart = 0; accepting = true;
+          if (startDictation()) setPhase("listening"); else setPhase("ready");
+        } else afterSpeak();
+        break;
+      case "paused":
+        finalText = ""; partial = ""; speechStart = 0; accepting = true;
+        if (startDictation()) setPhase("listening"); else setPhase("ready");
+        break;
+      case "error":
+        askAI();
+        break;
+    }
+  }
+  $("#orb").addEventListener("click", onOrb);
+  document.addEventListener("keydown", (e) => {
+    if (e.code !== "Space" || e.repeat) return;
+    const tag = document.activeElement?.tagName;
+    if (tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT" || tag === "BUTTON" || tag === "SUMMARY") return;
+    e.preventDefault(); onOrb();
+  });
+  $("#btn-send").onclick = () => { if (phase === "listening" && currentText()) commitTurn(); };
+  $("#btn-clear").onclick = () => { finalText = ""; partial = ""; speechStart = 0; clearTimeout(silTimer); $("#orb").classList.remove("counting"); renderLive(); };
+  $("#btn-end").onclick = () => endSession(true);
+  $("#btn-lang").onclick = () => {
+    settings.lang = settings.lang === "en" ? "ko" : "en"; saveSettings();
+    if (D && D.active()) { D.stop().catch(() => {}); D.start({ language: settings.lang }).catch(dictError); }
+  };
+  $("#typed").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("#typebox").requestSubmit(); } });
+  $("#typebox").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const text = $("#typed").value.trim();
+    if (!text) return;
+    if (!session) { startSession(); if (!session) return; $("#typed").value = ""; pendingTyped = text; return; }
+    if (!["ready", "listening", "paused", "error", "speaking"].includes(phase)) return;
+    $("#typed").value = "";
+    stopSpeaking(); clearTimeout(silTimer);
+    accepting = false; finalText = ""; partial = ""; speechStart = 0;
+    addUserTurn(text, 0);
+    askAI();
+  });
+
+  // ---------- review ----------
+  async function runReview(done) {
+    const wrap = $("#review-wrap"), box = $("#review");
+    wrap.hidden = false; box.replaceChildren(el("div", "card muted", "Claude가 이번 대화를 읽고 복습 노트를 만드는 중이에요…"));
+    $("#review-sub").textContent = "";
+    wrap.scrollIntoView({ behavior: "smooth", block: "start" });
+    const me = done.turns.filter((t) => t.role === "user");
+    const stats = {
+      turns: me.length,
+      words: me.reduce((a, t) => a + t.words, 0),
+      longest: me.reduce((a, t) => Math.max(a, t.words), 0),
+      minutes: Math.max(1, Math.round((Date.now() - done.started) / 60000)),
+    };
+    let transcript = done.turns.map((t) => (t.role === "user" ? "L: " : "AI: ") + t.content).join("\n");
+    if (transcript.length > 24000) transcript = transcript.slice(-24000);
+    const scn = SCENARIOS.find((s) => s.id === done.scenario);
+    const prompt = [
+      `You are an English speaking coach reviewing a voice conversation between a Korean adult learner (L) and a conversation partner (AI).`,
+      `The learner's lines are speech-to-text, so ignore punctuation, capitalization, fillers and obvious transcription glitches.`,
+      `Level: ${LEVELS[done.level].desc} Scenario: ${scn.ko}.`,
+      `Reply with only a JSON object:`,
+      `{"summary_ko": "2-3 warm, specific Korean sentences on how the learner did",`,
+      ` "strengths": ["short Korean point", "... up to 3"],`,
+      ` "fixes": [{"said": "short exact quote of the learner", "better": "natural English", "why_ko": "Korean, one sentence"}],`,
+      ` "expressions": [{"en": "useful phrase for this topic", "ko": "Korean meaning"}],`,
+      ` "next_ko": "one Korean sentence: what to practice next time"}`,
+      `fixes: up to 6, the most useful ones, prefer patterns the learner repeated. expressions: up to 8.`,
+      ``,
+      `Transcript:`,
+      transcript,
+    ].join("\n");
+    let r;
+    try { r = await S.json(prompt, { cache: false }); }
+    catch (e) {
+      box.replaceChildren(el("div", "card", e?.code === "rate_limited" ? "사용량이 많아 복습을 만들지 못했어요. 대화 기록은 위에 남아 있어요." : "복습을 만들지 못했어요. 대화 기록은 위에 남아 있어요."));
+      const retry = el("button", "btn", "복습 다시 만들기"); retry.onclick = () => runReview(done); box.firstChild.append(retry);
+      return;
+    }
+    const note = {
+      createdAt: Date.now(),
+      scenario: done.scenario, scenarioKo: scn.ko, level: done.level, stats,
+      summary_ko: str(r?.summary_ko, 800),
+      strengths: (Array.isArray(r?.strengths) ? r.strengths : []).map((s) => str(s, 200)).filter(Boolean).slice(0, 3),
+      fixes: (Array.isArray(r?.fixes) ? r.fixes : []).map((f) => ({ said: str(f?.said, 300), better: str(f?.better, 300), why_ko: str(f?.why_ko, 300) })).filter((f) => f.better).slice(0, 6),
+      expressions: (Array.isArray(r?.expressions) ? r.expressions : []).map((x) => ({ en: str(x?.en, 120), ko: str(x?.ko, 120) })).filter((x) => x.en).slice(0, 8),
+      next_ko: str(r?.next_ko, 300),
+      transcript: done.turns.map((t) => ({ r: t.role === "user" ? "L" : "AI", t: t.content.slice(0, 2000) })).slice(-80),
+    };
+    box.replaceChildren(noteBody(note, true));
+    $("#review-sub").textContent = "저장 중…";
+    const ok = await saveNote(note);
+    $("#review-sub").textContent = ok === "db" ? "복습 노트에 저장됨" : ok === "local" ? "이 브라우저에 저장됨" : "저장하지 못했어요";
+  }
+  function noteBody(n, asCard) {
+    const c = el("div", asCard ? "card" : "body");
+    const st = n.stats || {};
+    const s = el("div", "stats"); s.style.justifyContent = "flex-start";
+    for (const [k, v] of [["턴", st.turns], ["단어", st.words], ["최장 턴", st.longest], ["분", st.minutes]]) { const x = el("span", null, k + " "); x.append(el("b", null, String(v ?? "–"))); s.append(x); }
+    c.append(s);
+    if (n.summary_ko) c.append(el("p", null, n.summary_ko));
+    if (n.strengths?.length) { c.append(el("h3", null, "잘한 점")); const ul = el("ul"); for (const x of n.strengths) ul.append(el("li", null, x)); c.append(ul); }
+    if (n.fixes?.length) {
+      c.append(el("h3", null, "이렇게 말해보세요"));
+      const list = el("div");
+      for (const f of n.fixes) {
+        const row = el("div", "fix");
+        if (f.said) row.append(el("div", "said muted", f.said));
+        const b = el("div", "better", f.better); b.style.fontFamily = "var(--f-display)"; b.style.fontWeight = "600"; row.append(b);
+        if (f.why_ko) row.append(el("div", "muted", f.why_ko));
+        const l = el("button", "mini", "듣고 따라 말하기"); l.type = "button"; l.style.alignSelf = "flex-start"; l.onclick = () => sayAside(f.better); row.append(l);
+        list.append(row);
+      }
+      c.append(list);
+    }
+    if (n.expressions?.length) { c.append(el("h3", null, "다음에 써볼 표현")); c.append(exprNodes(n.expressions)); }
+    if (n.next_ko) { const p = el("p", "muted", "다음 연습: " + n.next_ko); c.append(p); }
+    return c;
+  }
+
+  // ---------- notebook storage ----------
+  let notesCache = [];
+  function renderNotes(list, sub) {
+    const box = $("#notes");
+    $("#notes-sub").textContent = sub || (list.length ? `${list.length}회 대화` : "");
+    if (!list.length) { box.replaceChildren(el("div", "empty", "대화를 끝내고 복습을 받으면 여기에 쌓여요. 고친 문장과 표현을 다시 듣고 따라 말할 수 있어요.")); return; }
+    box.replaceChildren(...list.map((n) => {
+      const d = el("details", "note");
+      const s = el("summary");
+      const left = el("span"); left.append(el("b", null, n.scenarioKo || "대화"), document.createTextNode(` · ${n.stats?.words ?? 0}단어 · 고칠 문장 ${n.fixes?.length ?? 0}개`));
+      const when = new Date(n.createdAt || 0);
+      s.append(left, el("span", "when", isNaN(when) ? "" : when.toLocaleString("ko-KR", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })));
+      d.append(s);
+      d.addEventListener("toggle", () => { if (d.open && d.children.length === 1) d.append(noteBody(n, false)); }, { once: false });
+      return d;
+    }));
+  }
+  function loadLocalNotes() { try { return JSON.parse(localStorage.getItem("ore-notes") || "[]"); } catch { return []; } }
+  async function saveNote(note) {
+    if (DB && uid) {
+      try { await DB.collection("data/users/" + uid).doc(note.createdAt + "").set(note); return "db"; } catch {}
+    }
+    try {
+      const list = loadLocalNotes(); list.unshift(note);
+      localStorage.setItem("ore-notes", JSON.stringify(list.slice(0, 40)));
+      if (!DB || !uid) renderNotes(list.slice(0, 40), "이 브라우저에만 저장돼요");
+      return "local";
+    } catch { return false; }
+  }
+  function subscribeNotes() {
+    if (!DB || !uid) { const l = loadLocalNotes(); renderNotes(l, l.length ? "이 브라우저에만 저장돼요" : ""); return; }
+    $("#notes-sub").textContent = "불러오는 중…";
+    const t = setTimeout(() => { $("#notes-sub").textContent = "노트를 아직 불러오지 못했어요"; }, 10000);
+    DB.collection("data/users/" + uid).orderBy("createdAt", "desc").limit(50).onSnapshot(
+      (snap) => { if (!snap.metadata.fromCache) clearTimeout(t); notesCache = snap.docs.map((d) => d.data()).filter(Boolean); renderNotes(notesCache); },
+      () => { clearTimeout(t); const l = loadLocalNotes(); renderNotes(l, "노트 저장소에 연결하지 못했어요"); }
+    );
+  }
+
+  // ---------- capability status ----------
+  function renderCaps() {
+    const set = (id, ok, txt) => { const n = $(id); n.dataset.ok = ok ? "1" : "0"; n.textContent = txt; };
+    set("#cap-mic", D && !micBlocked, D && !micBlocked ? "음성 입력 OK" : "음성 입력 불가");
+    set("#cap-ai", !!S, S ? "Claude OK" : "Claude 연결 안 됨");
+    const claudeVoice = T && !ttsBlocked;
+    set("#cap-voice", claudeVoice || !!window.speechSynthesis, claudeVoice ? "Claude 음성 OK" : window.speechSynthesis ? "기기 음성만" : "음성 출력 없음");
+    if (capsReady && !D) notice("mic", "이 화면에서는 음성 입력을 쓸 수 없어요 (아이폰, Claude 모바일 앱, Safari 등). 컴퓨터나 안드로이드의 Chrome 브라우저에서 이 링크를 열어주세요. 지금은 아래 입력창(키보드 받아쓰기 포함)으로 대화할 수 있어요.", true);
+    if (capsReady && !T && settings.mode === "tap") notice("tts", "이 화면에서는 Claude 음성을 쓸 수 없어서 기기 음성으로 읽어요.");
+  }
+
+  // ---------- boot ----------
+  renderSettings();
+  renderExample();
+  renderLive();
+  (async () => {
+    const c = window.claude;
+    if (c && typeof c.use === "function") {
+      const get = (n) => c.use(n).catch(() => null);
+      [D, S, T, DB, U] = await Promise.all([get("dictation"), get("sample"), get("tts"), get("db"), get("user")]);
+      try { uid = U ? await U.id() : null; } catch { uid = null; }
+    }
+    capsReady = true;
+    if (D) wireDictation();
+    if (T && typeof T.setRate === "function") T.setRate(settings.rate).catch(() => {});
+    renderCaps();
+    subscribeNotes();
+    renderOrb();
+  })();
+})();
+</script>
