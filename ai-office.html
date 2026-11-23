@@ -1,0 +1,881 @@
+<title>AI 비서 오피스</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=IBM+Plex+Sans+KR:wght@400;600&family=Silkscreen&display=swap">
+<style>
+/* Layout: a pixel office floor (rooms per department) on the left, a boss's side panel (staff / approvals / projects / log) on the right. */
+:root {
+  --bg: #E9EEF2; --panel: #FFFFFF; --panel-2: #F3F6F9; --ink: #1F2933; --muted: #5C6876;
+  --line: #C9D3DC; --line-strong: #93A2B0; --shadow: #B7C3CE;
+  --floor-a: #DCE6EE; --floor-b: #D1DDE7; --wall: #C3D2DE;
+  --accent: #4E62F5; --accent-ink: #FFFFFF; --chip: #E8ECFF;
+  --gold: #C98408; --good: #1B8F61; --warn: #C46F17; --bad: #CC3D3D;
+  --f-display: "Jua", "IBM Plex Sans KR", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-pixel: "Silkscreen", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111720; --panel: #1A222D; --panel-2: #212B38; --ink: #E5EAF0; --muted: #98A5B3;
+  --line: #2E3A49; --line-strong: #4A5A6D; --shadow: #070A0F;
+  --floor-a: #1E2834; --floor-b: #1A232E; --wall: #263243;
+  --accent: #8291FF; --accent-ink: #0D1120; --chip: #252E4D;
+  --gold: #F2B33D; --good: #3CC78E; --warn: #F0A04B; --bad: #F07070; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111720; --panel: #1A222D; --panel-2: #212B38; --ink: #E5EAF0; --muted: #98A5B3;
+  --line: #2E3A49; --line-strong: #4A5A6D; --shadow: #070A0F;
+  --floor-a: #1E2834; --floor-b: #1A232E; --wall: #263243;
+  --accent: #8291FF; --accent-ink: #0D1120; --chip: #252E4D;
+  --gold: #F2B33D; --good: #3CC78E; --warn: #F0A04B; --bad: #F07070; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 14px; line-height: 1.55; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 16px 48px; max-width: 1440px; margin: 0 auto; display: grid; gap: 16px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; margin: 0; text-wrap: balance; letter-spacing: .01em; }
+
+/* pixel-ish boxes */
+.box { background: var(--panel); border: 2px solid var(--line-strong); border-radius: 8px; box-shadow: 3px 3px 0 var(--shadow); }
+.btn { border: 2px solid var(--line-strong); background: var(--panel); border-radius: 7px; padding: 6px 12px; box-shadow: 2px 2px 0 var(--shadow); font-weight: 600; font-size: 13px; white-space: nowrap; }
+.btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 var(--shadow); }
+.btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 var(--shadow); }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.ghost { box-shadow: none; background: transparent; }
+.btn.danger { color: var(--bad); }
+.btn.sm { padding: 3px 9px; font-size: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--chip); color: var(--ink); white-space: nowrap; }
+.dept-chip { color: #FFFFFF; }
+.muted { color: var(--muted); }
+.num { font-family: var(--f-pixel); font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 12px 16px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.logo { width: 40px; height: 40px; image-rendering: pixelated; flex: none; }
+.brand h1 { font-size: 24px; line-height: 1.1; }
+.brand-name { background: none; border: 0; padding: 0; text-align: left; }
+.brand-name:hover h1 { text-decoration: underline dotted; }
+.brand small { display: block; color: var(--muted); font-size: 12px; }
+.clock { font-family: var(--f-pixel); font-size: 18px; }
+.stats { display: flex; flex-wrap: wrap; gap: 8px; }
+.stat { display: flex; flex-direction: column; padding: 4px 10px; border: 2px solid var(--line); border-radius: 7px; background: var(--panel-2); min-width: 72px; }
+.stat b { font-family: var(--f-pixel); font-size: 16px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 11px; color: var(--muted); letter-spacing: .03em; }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; align-items: start; }
+@media (max-width: 980px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* sky band */
+.sky { position: relative; height: 54px; border-radius: 8px 8px 0 0; overflow: hidden; border: 2px solid var(--line-strong); border-bottom: 0; }
+.sky .orb { position: absolute; width: 22px; height: 22px; border-radius: 4px; top: 14px; }
+.sky .sky-label { position: absolute; right: 10px; top: 8px; font-family: var(--f-display); font-size: 15px; padding: 2px 10px; border-radius: 6px; background: rgba(0,0,0,.28); color: #FFFFFF; }
+.sky .mullion { position: absolute; inset: 0; background: repeating-linear-gradient(90deg, transparent 0 118px, var(--wall) 118px 124px); }
+.office { border-radius: 0 0 8px 8px; border-top-width: 2px; padding: 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 14px; }
+.room { border: 2px solid var(--line-strong); border-radius: 8px; background-color: var(--floor-a);
+  background-image: linear-gradient(45deg, var(--floor-b) 25%, transparent 25%, transparent 75%, var(--floor-b) 75%), linear-gradient(45deg, var(--floor-b) 25%, transparent 25%, transparent 75%, var(--floor-b) 75%);
+  background-size: 24px 24px; background-position: 0 0, 12px 12px; min-width: 0; }
+.room-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: var(--wall); border-bottom: 2px solid var(--line-strong); border-radius: 6px 6px 0 0; }
+.room-head h2 { font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.room-head .dot { width: 10px; height: 10px; border-radius: 2px; }
+.desks { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 8px 12px; }
+.desk { position: relative; width: 104px; padding: 26px 4px 4px; border: 2px solid transparent; border-radius: 8px; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.desk:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--panel) 45%, transparent); }
+.desk.sel { border-color: var(--accent); background: color-mix(in srgb, var(--panel) 60%, transparent); }
+.desk canvas { width: 96px; height: 78px; image-rendering: pixelated; }
+.plate { display: flex; flex-direction: column; align-items: center; line-height: 1.25; max-width: 100%; }
+.plate b { font-family: var(--f-display); font-weight: 400; font-size: 15px; }
+.plate small { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 96px; }
+.bubble { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; white-space: nowrap; padding: 1px 7px; border-radius: 6px; background: var(--panel); border: 2px solid var(--line-strong); }
+.bubble::after { content: ""; position: absolute; left: 50%; bottom: -6px; margin-left: -4px; border: 4px solid transparent; border-top-color: var(--line-strong); }
+.st-off .bubble { color: var(--muted); border-color: var(--line); }
+.st-off .bubble::after { border-top-color: var(--line); }
+.st-work .bubble { color: var(--accent); border-color: var(--accent); }
+.st-work .bubble::after { border-top-color: var(--accent); }
+.st-review .bubble { color: var(--gold); border-color: var(--gold); animation: nudge 1.2s ease-in-out infinite; }
+.st-review .bubble::after { border-top-color: var(--gold); }
+.st-stuck .bubble { color: var(--bad); border-color: var(--bad); }
+.st-stuck .bubble::after { border-top-color: var(--bad); }
+.st-off .plate b { color: var(--muted); }
+.desk.hire { justify-content: center; min-height: 128px; border: 2px dashed var(--line-strong); color: var(--muted); font-weight: 600; font-size: 12px; padding-top: 4px; }
+.desk.hire:hover { color: var(--accent); border-color: var(--accent); }
+.desk.arrive canvas { animation: hop .6s ease-out; }
+@keyframes hop { 0% { transform: translateY(-18px); opacity: 0 } 60% { transform: translateY(3px); opacity: 1 } 100% { transform: none } }
+@keyframes nudge { 0%,100% { transform: translateX(-50%) } 50% { transform: translateX(-50%) translateY(-3px) } }
+@media (prefers-reduced-motion: reduce) { .desk.arrive canvas, .st-review .bubble { animation: none } .btn:hover { transform: none } }
+
+/* side panel */
+.panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; max-height: calc(100vh - 24px); min-width: 0; }
+@media (max-width: 980px) { .panel { position: static; max-height: none; } }
+.tabs { display: flex; border-bottom: 2px solid var(--line-strong); }
+.tab { flex: 1; border: 0; background: transparent; padding: 10px 4px; font-family: var(--f-display); font-size: 15px; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .cnt { font-family: var(--f-pixel); font-size: 11px; background: var(--gold); color: #FFFFFF; border-radius: 6px; padding: 0 5px; margin-left: 3px; }
+.pbody { padding: 14px; overflow: auto; display: grid; gap: 14px; align-content: start; min-height: 0; }
+.field { display: grid; gap: 4px; }
+.field label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .03em; }
+.input, select.input, textarea.input { width: 100%; border: 2px solid var(--line-strong); border-radius: 7px; background: var(--panel-2); padding: 7px 9px; }
+textarea.input { resize: vertical; min-height: 84px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sugs { display: flex; flex-wrap: wrap; gap: 6px; }
+.sug { border: 1.5px dashed var(--line-strong); background: transparent; border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); text-align: left; }
+.sug:hover { color: var(--accent); border-color: var(--accent); }
+
+.agent-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; }
+.agent-card canvas { width: 128px; height: 104px; image-rendering: pixelated; background: var(--floor-a); border-radius: 8px; border: 2px solid var(--line); }
+.agent-card h2 { font-size: 24px; }
+.meter { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 8px; align-items: center; font-size: 12px; }
+.bar { height: 10px; border: 2px solid var(--line-strong); border-radius: 3px; background: var(--panel-2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+.bar.energy i { background: var(--good); }
+.bar.low i { background: var(--warn); }
+
+.list { display: grid; gap: 8px; }
+.item { display: grid; gap: 4px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel-2); text-align: left; width: 100%; }
+.item:hover { border-color: var(--line-strong); }
+.item .t { font-weight: 600; overflow-wrap: anywhere; }
+.item .meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.item .pv { font-size: 12.5px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.s-queued { background: var(--chip); }
+.s-working { background: var(--accent); color: var(--accent-ink); }
+.s-review { background: var(--gold); color: #FFFFFF; }
+.s-done { background: var(--good); color: #FFFFFF; }
+.s-failed, .s-stuck { background: var(--bad); color: #FFFFFF; }
+.sect-h { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sect-h h3 { font-size: 17px; }
+.empty { border: 2px dashed var(--line-strong); border-radius: 8px; padding: 16px; text-align: center; color: var(--muted); display: grid; gap: 10px; justify-items: center; }
+.note { font-size: 12.5px; color: var(--muted); background: var(--panel-2); border-radius: 7px; padding: 8px 10px; border: 1.5px solid var(--line); }
+.confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 7px; border: 2px solid var(--bad); }
+
+/* modal */
+.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(10, 14, 22, .5); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal { width: min(760px, 100%); max-height: 100%; display: flex; flex-direction: column; min-width: 0; }
+.modal-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 2px solid var(--line); }
+.modal-h h2 { font-size: 20px; overflow-wrap: anywhere; }
+.modal-b { padding: 16px; overflow: auto; display: grid; gap: 14px; min-height: 0; }
+.modal-f { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 12px 16px; border-top: 2px solid var(--line); }
+.doc { font-size: 14.5px; line-height: 1.75; max-width: 68ch; overflow-wrap: anywhere; }
+.doc h4 { font-family: var(--f-display); font-weight: 400; font-size: 17px; margin: 16px 0 4px; }
+.doc p { margin: 6px 0; }
+.doc ul, .doc ol { margin: 6px 0; padding-left: 22px; }
+.doc code { background: var(--panel-2); padding: 0 4px; border-radius: 4px; font-size: 13px; }
+.doc .tbl { font-family: ui-monospace, monospace; font-size: 12.5px; white-space: pre; overflow-x: auto; margin: 0; }
+.doc blockquote { margin: 6px 0; padding-left: 10px; border-left: 3px solid var(--line-strong); color: var(--muted); }
+.doc hr { border: 0; border-top: 2px dashed var(--line); margin: 12px 0; }
+.thinking { color: var(--muted); font-style: italic; }
+.roles { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.role-opt { text-align: left; padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel-2); display: grid; gap: 2px; }
+.role-opt[aria-pressed="true"] { border-color: var(--accent); background: var(--chip); }
+.role-opt b { font-size: 13.5px; }
+.role-opt small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.prop { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; padding: 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.prop textarea { min-height: 56px; }
+
+.toasts { position: fixed; z-index: 60; left: 0; right: 0; bottom: 0; display: grid; justify-items: center; gap: 6px; padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); pointer-events: none; }
+.toast { background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; box-shadow: 3px 3px 0 var(--shadow); max-width: 100%; }
+.loading { padding: 40px 16px; text-align: center; color: var(--muted); font-family: var(--f-display); font-size: 18px; }
+</style>
+
+<div class="wrap">
+  <header class="top box">
+    <div class="brand">
+      <canvas class="logo" id="logo" width="16" height="16" aria-hidden="true"></canvas>
+      <button class="brand-name" id="brandBtn" title="회사 이름 바꾸기">
+        <h1 id="companyName">내 AI 오피스</h1>
+        <small>사장님 전용 비서실 · <span class="clock" id="clock">--:--</span></small>
+      </button>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="top-actions">
+      <button class="btn" id="allIn">전체 출근</button>
+      <button class="btn" id="allOut">전체 퇴근</button>
+      <button class="btn" id="meetingBtn">아침 회의</button>
+      <button class="btn primary" id="hireBtn">비서 채용</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <main>
+      <div class="sky" id="sky" aria-hidden="true"></div>
+      <section class="office box" id="office"><div class="loading">사무실 불 켜는 중…</div></section>
+    </main>
+    <aside class="panel box" id="panel">
+      <div class="tabs" role="tablist" id="tabs"></div>
+      <div class="pbody" id="pbody"></div>
+    </aside>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+
+/* ---------- game content ---------- */
+const DEPTS = [
+  { id: "strategy",  name: "전략실",        color: "#4E62F5" },
+  { id: "research",  name: "리서치랩",      color: "#1E9B7E" },
+  { id: "marketing", name: "마케팅팀",      color: "#E2553A" },
+  { id: "content",   name: "콘텐츠 스튜디오", color: "#D18A00" },
+  { id: "product",   name: "개발·디자인",   color: "#8A55E0" },
+  { id: "ops",       name: "영업·운영",     color: "#2F84CF" },
+];
+const ROLES = [
+  { key: "strategist", dept: "strategy", title: "전략기획", desc: "수익모델, 사업 우선순위, 실행 로드맵 설계", ex: ["이번 달 수익 목표를 위한 우선순위 3가지와 이유", "수익모델 3가지 비교표와 추천안"] },
+  { key: "pm", dept: "strategy", title: "프로젝트 매니저", desc: "일정 관리, 할 일 쪼개기, 진행 점검", ex: ["이번 주 할 일을 요일별 체크리스트로", "막혀 있는 일과 해결 순서 정리"] },
+  { key: "market", dept: "research", title: "시장조사", desc: "타깃 고객, 시장 규모, 수요 신호 분석", ex: ["핵심 타깃 고객 페르소나 3명", "수요를 검증할 저비용 실험 5가지"] },
+  { key: "competitor", dept: "research", title: "경쟁사 분석", desc: "경쟁 서비스 가격·강점·빈틈 비교", ex: ["경쟁 서비스 유형별 비교표와 우리 빈틈", "경쟁사 리뷰에서 나올 불만 예상과 대응"] },
+  { key: "trend", dept: "research", title: "트렌드 리서처", desc: "요즘 뜨는 키워드와 소재 발굴", ex: ["이번 달 써먹을 콘텐츠 소재 10개", "우리 분야 검색 키워드 아이디어 20개"] },
+  { key: "growth", dept: "marketing", title: "퍼포먼스 마케터", desc: "광고 소재, 타깃팅, 퍼널 전환 개선", ex: ["메타 광고 소재 문구 5세트", "랜딩 전환율을 올릴 체크리스트"] },
+  { key: "sns", dept: "marketing", title: "SNS 매니저", desc: "인스타·스레드·X 게시물과 운영 캘린더", ex: ["2주치 인스타 게시물 캘린더", "스레드에 올릴 짧은 글 7개"] },
+  { key: "seo", dept: "marketing", title: "SEO 담당", desc: "검색 키워드, 제목, 메타 설명 최적화", ex: ["블로그 글 제목 10개와 메타 설명", "상위 노출용 키워드 묶음 설계"] },
+  { key: "copy", dept: "content", title: "카피라이터", desc: "상세페이지, 광고 문구, 헤드라인", ex: ["상세페이지 첫 화면 헤드라인 10개", "구매 망설임을 푸는 FAQ 문구"] },
+  { key: "blog", dept: "content", title: "블로그 작가", desc: "정보성 글, 후기형 글 초안", ex: ["검색 유입용 정보성 글 1편 초안", "사용 후기 형식의 글 1편 초안"] },
+  { key: "video", dept: "content", title: "영상 스크립트", desc: "쇼츠·릴스·유튜브 대본과 훅", ex: ["30초 쇼츠 대본 3개", "첫 3초 훅 문장 10개"] },
+  { key: "newsletter", dept: "content", title: "뉴스레터 에디터", desc: "구독자 메일, 시퀀스 메일", ex: ["신규 구독자 환영 메일 3통 시퀀스", "이번 주 뉴스레터 1편"] },
+  { key: "devpm", dept: "product", title: "개발 PM", desc: "기능 명세, MVP 범위, 기술 선택", ex: ["MVP 기능 명세와 우선순위", "노코드로 만들 수 있는 범위 정리"] },
+  { key: "automation", dept: "product", title: "자동화 엔지니어", desc: "반복 업무 자동화 방법과 스크립트", ex: ["매일 반복하는 일 자동화 방안 5개", "구글시트+메일 자동화 설계"] },
+  { key: "designer", dept: "product", title: "디자인 기획", desc: "브랜딩, 화면 구성, 썸네일 콘셉트", ex: ["썸네일 콘셉트 5가지와 문구", "랜딩페이지 섹션 구성안"] },
+  { key: "sales", dept: "ops", title: "영업 담당", desc: "제안서, 콜드메일, 협업 제안", ex: ["협업 제안 콜드메일 3가지 버전", "B2B 제안서 목차와 핵심 문장"] },
+  { key: "cs", dept: "ops", title: "고객응대 CS", desc: "FAQ, 응대 매뉴얼, 리뷰 답변", ex: ["자주 묻는 질문 10개와 답변", "불만 리뷰 답변 템플릿 5개"] },
+  { key: "finance", dept: "ops", title: "재무·가격 분석", desc: "가격 책정, 손익 계산, 비용 절감", ex: ["가격 3단계(기본/추천/프리미엄) 설계", "월 손익분기점 계산표"] },
+];
+const STARTER = [
+  ["하루","strategist"],["다온","pm"],["도윤","market"],["서아","competitor"],["지호","growth"],["나래","sns"],
+  ["은솔","copy"],["태오","blog"],["모아","video"],["건우","devpm"],["소미","cs"],["재민","finance"],
+];
+const NAMES = ["가을","라온","보라","세린","시우","아린","연우","예준","유나","윤슬","이안","주아","채원","하준","해솔","로운","단비","미르","바다","초롱","한결","다솜","누리","마루","빛나","새봄","온유","리안","별하","수아","지안","도하"];
+const MAX_STAFF = 40;
+const ROLE = Object.fromEntries(ROLES.map(r => [r.key, r]));
+const DEPT = Object.fromEntries(DEPTS.map(d => [d.id, d]));
+
+/* ---------- utils ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const now = () => Date.now();
+const lvl = xp => Math.floor((xp || 0) / 100) + 1;
+const isToday = ts => ts && new Date(ts).toDateString() === new Date().toDateString();
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function hash(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
+function ago(ts) { if (!ts) return ""; const m = Math.round((now() - ts) / 60000); if (m < 1) return "방금"; if (m < 60) return m + "분 전"; const h = Math.round(m / 60); if (h < 24) return h + "시간 전"; return Math.round(h / 24) + "일 전"; }
+function toast(msg) { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; $("#toasts").append(el); setTimeout(() => el.remove(), 3200); }
+function md(src) {
+  const lines = esc(src).split("\n"); let out = "", list = null;
+  const inl = t => t.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`([^`]+)`/g, "<code>$1</code>");
+  const close = () => { if (list) { out += `</${list}>`; list = null; } };
+  for (const raw of lines) {
+    const l = raw.trimEnd(); let m;
+    if ((m = l.match(/^#{1,6}\s+(.*)/))) { close(); out += `<h4>${inl(m[1])}</h4>`; }
+    else if ((m = l.match(/^\s*[-*•]\s+(.*)/))) { if (list !== "ul") { close(); out += "<ul>"; list = "ul"; } out += `<li>${inl(m[1])}</li>`; }
+    else if ((m = l.match(/^\s*\d+[.)]\s+(.*)/))) { if (list !== "ol") { close(); out += "<ol>"; list = "ol"; } out += `<li>${inl(m[1])}</li>`; }
+    else if (/^\s*(---|\*\*\*)\s*$/.test(l)) { close(); out += "<hr>"; }
+    else if ((m = l.match(/^&gt;\s?(.*)/))) { close(); out += `<blockquote>${inl(m[1])}</blockquote>`; }
+    else if (/^\s*\|/.test(l)) { close(); out += `<pre class="tbl">${l}</pre>`; }
+    else if (!l.trim()) close();
+    else { close(); out += `<p>${inl(l)}</p>`; }
+  }
+  close(); return out;
+}
+
+/* ---------- store (db capability, else this browser) ---------- */
+const S = { agents: new Map(), projects: new Map(), tasks: new Map(), meta: {}, ready: false, mode: "loading", readOnly: false };
+let db = null, sample = null;
+const chains = new Map();
+function chain(key, fn) { const p = (chains.get(key) || Promise.resolve()).then(fn, fn); chains.set(key, p.catch(() => {})); return p; }
+const LS_KEY = "ai-office-v1";
+function lsSave() { try { localStorage.setItem(LS_KEY, JSON.stringify({ agents: Object.fromEntries(S.agents), projects: Object.fromEntries(S.projects), tasks: Object.fromEntries(S.tasks), meta: S.meta })); } catch {} }
+function lsLoad() { try { const d = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (d) { for (const k of ["agents","projects","tasks"]) for (const [id, v] of Object.entries(d[k] || {})) S[k].set(id, v); S.meta = d.meta || {}; } } catch {} }
+function writeErr(e) {
+  if (e && e.code === "invalid_argument") { S.readOnly = true; toast("이 사무실은 보기 전용이에요. 편집 권한이 있어야 바꿀 수 있어요."); }
+  else if (e && e.code === "quota_exceeded") toast("저장 공간이 가득 찼어요. 오래된 업무 기록을 지워 주세요.");
+  else toast("저장하지 못했어요. 잠시 뒤 다시 해 주세요.");
+}
+async function put(col, id, data) {
+  if (db) return chain(col + "/" + id, () => db.collection(col).doc(id).set(data)).catch(writeErr);
+  S[col].set(id, data); lsSave(); renderAll();
+}
+async function patch(col, id, data) {
+  if (db) return chain(col + "/" + id, () => db.collection(col).doc(id).update(data)).catch(writeErr);
+  const cur = S[col].get(id); if (!cur) return; S[col].set(id, { ...cur, ...data }); lsSave(); renderAll();
+}
+async function del(col, id) {
+  if (db) return chain(col + "/" + id, () => db.collection(col).doc(id).delete()).catch(writeErr);
+  S[col].delete(id); lsSave(); renderAll();
+}
+async function putMeta(data) {
+  if (db) return chain("meta/office", () => db.doc("meta/office").set({ ...S.meta, ...data })).catch(writeErr);
+  S.meta = { ...S.meta, ...data }; lsSave(); renderAll();
+}
+
+async function initStore() {
+  if (window.claude && typeof window.claude.use === "function") {
+    try { db = await window.claude.use("db"); } catch { db = null; }
+    window.claude.use("sample").then(s => { sample = s; renderPanelDynamic(); }).catch(() => {});
+  }
+  if (!db) { S.mode = "local"; lsLoad(); S.ready = true; renderAll(); return; }
+  S.mode = "db";
+  let pending = 4; const got = () => { if (--pending <= 0 && !S.ready) { S.ready = true; clearTimeout(slow); } };
+  const slow = setTimeout(() => { if (!S.ready) { S.ready = true; toast("저장소 연결이 느려요. 보이는 내용이 최신이 아닐 수 있어요."); renderAll(); } }, 10000);
+  const sub = (col, q) => {
+    let first = true;
+    q.onSnapshot(snap => {
+      const m = new Map(); snap.docs.forEach(d => m.set(d.id, d.data())); S[col] = m;
+      if (first && !snap.metadata.fromCache) { first = false; got(); }
+      renderAll();
+    }, () => { if (first) { first = false; got(); } renderAll(); });
+  };
+  sub("agents", db.collection("agents"));
+  sub("projects", db.collection("projects"));
+  sub("tasks", db.collection("tasks").orderBy("createdAt", "desc").limit(400));
+  let mfirst = true;
+  db.doc("meta/office").onSnapshot(d => { S.meta = d.exists ? d.data() : {}; if (mfirst && !d.metadata.fromCache) { mfirst = false; got(); } renderAll(); }, () => { if (mfirst) { mfirst = false; got(); } });
+}
+
+/* ---------- derived ---------- */
+const agentsSorted = () => [...S.agents.entries()].map(([id, a]) => ({ id, ...a })).sort((x, y) => (x.hiredAt || 0) - (y.hiredAt || 0));
+const projectsSorted = () => [...S.projects.entries()].map(([id, p]) => ({ id, ...p })).sort((x, y) => (x.createdAt || 0) - (y.createdAt || 0));
+const tasksSorted = () => [...S.tasks.entries()].map(([id, t]) => ({ id, ...t })).sort((x, y) => (y.createdAt || 0) - (x.createdAt || 0));
+const running = new Map();      // taskId -> {ctl, text}
+let pumpArmed = false;
+function taskState(t) { if (t.status === "working" && !running.has(t.id)) return "stuck"; return t.status; }
+function agentState(a) {
+  if (!a.onDuty) return { s: "off", label: "퇴근" };
+  const ts = tasksSorted().filter(t => t.agentId === a.id);
+  const w = ts.find(t => running.has(t.id));
+  if (w) { const txt = running.get(w.id).text || ""; return { s: "work", label: txt ? `작업 중 ${Math.min(95, Math.round(txt.length / 16))}%` : "생각 중…", task: w }; }
+  if (ts.some(t => taskState(t) === "stuck" || t.status === "failed")) return { s: "stuck", label: "확인 필요" };
+  const rv = ts.filter(t => t.status === "review").length;
+  if (rv) return { s: "review", label: `결재 부탁! ${rv}` };
+  const q = ts.filter(t => t.status === "queued").length;
+  if (q) return { s: "queued", label: `대기 업무 ${q}` };
+  if ((a.energy ?? 100) < 20) return { s: "idle", label: "피곤해요…" };
+  return { s: "idle", label: "대기 중" };
+}
+const STATUS_LABEL = { queued: "대기", working: "작업 중", review: "결재 대기", done: "승인 완료", failed: "실패", stuck: "중단됨", stopped: "멈춤" };
+
+/* ---------- pixel sprites ---------- */
+const SKINS = ["#FFDCC2", "#F3C49E", "#DDA47C", "#B47852"];
+const HAIRS = ["#2A2230", "#5A3A2A", "#A5652F", "#E3BD55", "#D0604A", "#6676EE", "#3E6B5A"];
+function looks(id, role) { const h = hash(id); return { skin: SKINS[h % 4], hair: HAIRS[(h >>> 3) % HAIRS.length], style: (h >>> 7) % 4, acc: (h >>> 10) % 6, shirt: (DEPT[ROLE[role]?.dept] || DEPTS[0]).color, ph: h % 3000 }; }
+function drawDesk(ctx, a, st, t) {
+  const p = (x, y, w, h, c) => { ctx.fillStyle = c; ctx.fillRect(x, y, w, h); };
+  ctx.clearRect(0, 0, 32, 26);
+  const L = looks(a.id, a.role), o = 4;
+  if (st === "off") {
+    p(10 + o, 8, 8, 9, "#4B5563"); p(10 + o, 8, 8, 1, "#6B7280"); p(13 + o, 17, 2, 1, "#374151");
+  } else {
+    const b = (st === "idle" || st === "queued") && !reduced ? (Math.floor((t + L.ph) / 700) % 2) : 0;
+    const H = L.hair;
+    if (L.style === 2) p(9 + o, 3 + b, 10, 8, H);
+    p(10 + o, 2 + b, 8, 8, L.skin);
+    p(10 + o, 1 + b, 8, 3, H);
+    if (L.style === 0) { p(10 + o, 4 + b, 1, 2, H); p(17 + o, 4 + b, 1, 2, H); }
+    if (L.style === 1) { p(10 + o, 4 + b, 3, 1, H); p(10 + o, 4 + b, 1, 3, H); }
+    if (L.style === 3) { p(12 + o, 0 + b, 4, 1, H); p(17 + o, 4 + b, 1, 2, H); }
+    const blink = !reduced && ((t + L.ph) % 3400) < 140;
+    const eye = "#1F2430";
+    if (blink) { p(12 + o, 6 + b, 1, 1, eye); p(15 + o, 6 + b, 1, 1, eye); }
+    else { p(12 + o, 5 + b, 1, 2, eye); p(15 + o, 5 + b, 1, 2, eye); }
+    if (L.acc === 2) { p(11 + o, 5 + b, 3, 1, "#1F2937"); p(14 + o, 5 + b, 3, 1, "#1F2937"); }
+    p(11 + o, 7 + b, 1, 1, "#F49CA2"); p(16 + o, 7 + b, 1, 1, "#F49CA2");
+    p(13 + o, 8 + b, 2, 1, st === "stuck" ? "#5B3A33" : "#B4553F");
+    if (L.acc === 3) p(16 + o, 0 + b, 3, 2, "#FF6FA8");
+    if (L.acc === 4) { p(10 + o, 0 + b, 8, 1, "#374151"); p(9 + o, 4 + b, 1, 3, "#374151"); p(18 + o, 4 + b, 1, 3, "#374151"); }
+    p(9 + o, 10, 10, 7, L.shirt); p(13 + o, 10, 2, 1, "#FFFFFF");
+    if (st === "work") {
+      const f = reduced ? 0 : Math.floor(t / 170) % 2;
+      p(8 + o, 11, 1, 3, L.shirt); p(9 + o, 14, 2, 2, L.shirt); p(11 + o, 15 - f, 2, 1, L.skin);
+      p(19 + o, 11, 1, 3, L.shirt); p(17 + o, 14, 2, 2, L.shirt); p(15 + o, 15 - (1 - f), 2, 1, L.skin);
+    } else if (st === "review") {
+      p(19 + o, 7, 1, 5, L.shirt); p(19 + o, 5, 2, 2, L.skin); p(20 + o, 2, 4, 4, "#FFFFFF"); p(21 + o, 3, 2, 1, "#9CA3AF");
+      p(8 + o, 11, 1, 5, L.shirt);
+    } else { p(8 + o, 11, 1, 5, L.shirt); p(19 + o, 11, 1, 5, L.shirt); }
+  }
+  // monitor (back side), desk, mug
+  p(2, 7, 8, 7, "#475260"); p(3, 8, 6, 5, "#5A6573"); p(5, 14, 2, 2, "#6B7280");
+  p(8, 12, 1, 1, st === "work" ? ((Math.floor(t / 300) % 2 || reduced) ? "#4ADE80" : "#166534") : "#9CA3AF");
+  p(1, 16, 30, 2, "#C98B55"); p(2, 18, 28, 7, "#A86B3C"); p(2, 18, 28, 1, "#8C5530");
+  p(21, 20, 7, 3, "#93592F"); p(23, 21, 3, 1, "#E8C38F");
+  p(25, 13, 3, 3, "#F4F4F5"); p(28, 14, 1, 1, "#F4F4F5");
+  if (st !== "off" && !reduced) p(26, 11 - (Math.floor(t / 500) % 2), 1, 1, "#CBD5E1");
+  if (st === "review") { p(16, 14, 6, 2, "#FFFFFF"); p(16, 14, 6, 1, "#E5E7EB"); }
+  if (st === "stuck") { p(25, 1, 2, 5, "#EF4444"); p(25, 7, 2, 2, "#EF4444"); }
+}
+function drawLogo() {
+  const c = $("#logo").getContext("2d"); const p = (x, y, w, h, col) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
+  p(1, 3, 14, 12, "#4E62F5"); p(2, 4, 12, 10, "#7C8BFF"); p(4, 1, 8, 3, "#4E62F5");
+  for (let y = 0; y < 3; y++) for (let x = 0; x < 3; x++) p(3 + x * 4, 5 + y * 3, 2, 2, (x + y) % 2 ? "#FFE28A" : "#FFFFFF");
+}
+let prevDuty = new Map();
+function frame(t) {
+  document.querySelectorAll("canvas[data-sprite]").forEach(cv => {
+    const a = S.agents.get(cv.dataset.sprite); if (!a) return;
+    drawDesk(cv.getContext("2d"), { id: cv.dataset.sprite, ...a }, cv.dataset.st, t);
+  });
+}
+let lastF = 0;
+function loop(t) { if (t - lastF > 110) { lastF = t; frame(t); } requestAnimationFrame(loop); }
+
+/* ---------- header / sky ---------- */
+function renderHeader() {
+  const cn = $("#companyName"); if (cn) cn.textContent = S.meta.companyName || "내 AI 오피스";
+  const ag = agentsSorted(), ts = tasksSorted();
+  const on = ag.filter(a => a.onDuty).length;
+  const working = running.size;
+  const review = ts.filter(t => t.status === "review").length;
+  const doneToday = ts.filter(t => t.status === "done" && isToday(t.approvedAt)).length;
+  const score = ts.filter(t => t.status === "done").length * 10;
+  $("#stats").innerHTML = [
+    [`${on}/${ag.length}`, "출근"], [working, "작업 중"], [review, "결재 대기"], [doneToday, "오늘 승인"], [score, "성과 점수"],
+  ].map(([v, k]) => `<div class="stat"><b>${esc(v)}</b><span>${k}</span></div>`).join("");
+}
+function renderSky() {
+  const h = new Date().getHours() + new Date().getMinutes() / 60;
+  let g, orb, label;
+  if (h >= 6 && h < 9) { g = "linear-gradient(180deg,#F9B48A,#FCE1B7)"; orb = "#FFF3B0"; label = "출근 시간"; }
+  else if (h >= 9 && h < 17) { g = "linear-gradient(180deg,#6FB6F2,#B9E0FA)"; orb = "#FFE45C"; label = "근무 시간"; }
+  else if (h >= 17 && h < 19.5) { g = "linear-gradient(180deg,#E8766A,#F7B36A)"; orb = "#FFD27A"; label = "퇴근 시간"; }
+  else { g = "linear-gradient(180deg,#141B3A,#2C3567)"; orb = "#F3F0D8"; label = agentsSorted().some(a => a.onDuty) ? "야근 중" : "밤"; }
+  const pct = ((h + 18) % 24) / 24 * 100;
+  $("#sky").style.background = g;
+  $("#sky").innerHTML = `<div class="orb" style="left:calc(${pct.toFixed(1)}% - 11px);background:${orb}"></div><div class="mullion"></div><div class="sky-label">${label}</div>`;
+  const d = new Date(), ck = $("#clock"); if (ck) ck.textContent = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+/* ---------- office ---------- */
+let selected = null;
+function renderOffice() {
+  const office = $("#office");
+  if (!S.ready) return;
+  const ag = agentsSorted();
+  if (!ag.length) {
+    office.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <h2>아직 출근할 비서가 없어요</h2>
+      <p>기본 팀 12명(전략·리서치·마케팅·콘텐츠·개발·운영)을 한 번에 채용하거나, 원하는 역할만 골라 뽑을 수 있어요.</p>
+      <div class="row" style="justify-content:center"><button class="btn primary" id="starter">기본 팀 12명 채용</button><button class="btn" data-act="hire">직접 고르기</button></div></div>`;
+    return;
+  }
+  const html = DEPTS.map(d => {
+    const list = ag.filter(a => ROLE[a.role]?.dept === d.id);
+    if (!list.length) return "";
+    const on = list.filter(a => a.onDuty).length;
+    return `<section class="room" aria-label="${esc(d.name)}">
+      <div class="room-head"><h2><span class="dot" style="background:${d.color}"></span>${esc(d.name)}</h2><span class="chip num">${on}/${list.length}</span></div>
+      <div class="desks">${list.map(a => {
+        const st = agentState(a); const r = ROLE[a.role];
+        const arrive = a.onDuty && prevDuty.get(a.id) === false ? " arrive" : "";
+        return `<button class="desk st-${st.s}${selected === a.id ? " sel" : ""}${arrive}" data-agent="${esc(a.id)}" aria-label="${esc(a.name)}, ${esc(r?.title)}, ${esc(st.label)}">
+          <span class="bubble" id="bub-${esc(a.id)}">${esc(st.label)}</span>
+          <canvas width="32" height="26" data-sprite="${esc(a.id)}" data-st="${st.s}"></canvas>
+          <span class="plate"><b>${esc(a.name)}</b><small>${esc(r?.title || "비서")} · Lv.${lvl(a.xp)}</small></span></button>`;
+      }).join("")}
+      <button class="desk hire" data-act="hire" data-dept="${d.id}">+ 빈 책상<br>채용하기</button></div></section>`;
+  }).join("");
+  office.innerHTML = html;
+  prevDuty = new Map(ag.map(a => [a.id, !!a.onDuty]));
+  frame(performance.now());
+}
+function updateBubbles() {
+  for (const a of agentsSorted()) {
+    const el = document.getElementById("bub-" + a.id); if (!el) continue;
+    const st = agentState(a); el.textContent = st.label;
+    const desk = el.parentElement; desk.className = desk.className.replace(/st-\w+/, "st-" + st.s);
+    const cv = desk.querySelector("canvas"); if (cv) cv.dataset.st = st.s;
+  }
+}
+
+/* ---------- panel ---------- */
+let tab = "inbox", confirmFire = false, editProject = null;
+function renderTabs() {
+  const rv = tasksSorted().filter(t => t.status === "review").length;
+  const tabs = [["agent", "비서"], ["inbox", "결재함", rv], ["projects", "프로젝트"], ["log", "업무 기록"]];
+  $("#tabs").innerHTML = tabs.map(([k, n, c]) => `<button class="tab" role="tab" aria-selected="${tab === k}" data-tab="${k}">${n}${c ? `<span class="cnt">${c}</span>` : ""}</button>`).join("");
+}
+function projectOptions(sel) {
+  const ps = projectsSorted();
+  return `<option value="">프로젝트 없이</option>` + ps.map(p => `<option value="${esc(p.id)}"${sel === p.id ? " selected" : ""}>${esc(p.name)}</option>`).join("");
+}
+const drafts = {};
+function renderPanel() {
+  renderTabs();
+  const b = $("#pbody");
+  if (!S.ready) { b.innerHTML = `<div class="loading">불러오는 중…</div>`; return; }
+  if (tab === "agent") {
+    const a = selected && S.agents.get(selected) ? { id: selected, ...S.agents.get(selected) } : null;
+    if (!a) { b.innerHTML = `<div class="empty"><p>사무실에서 비서 책상을 누르면<br>여기서 업무를 지시할 수 있어요.</p></div>`; return; }
+    const r = ROLE[a.role] || ROLES[0], d = DEPT[r.dept];
+    const dr = drafts[a.id] || {};
+    b.innerHTML = `
+      <div class="agent-card"><canvas width="32" height="26" data-sprite="${esc(a.id)}" data-st="idle" id="bigSprite"></canvas>
+        <div style="display:grid;gap:6px;min-width:0"><h2>${esc(a.name)}</h2>
+          <div class="row"><span class="chip dept-chip" style="background:${d.color}">${esc(d.name)}</span><span class="chip">${esc(r.title)}</span></div>
+          <div class="muted" style="font-size:12.5px">${esc(r.desc)}</div></div></div>
+      <div id="agentStats"></div>
+      <div class="row" id="agentBtns"></div>
+      <div id="fireBox"></div>
+      <div class="field"><label for="f-project">프로젝트</label><select class="input" id="f-project">${projectOptions(dr.project ?? S.meta.lastProject ?? "")}</select></div>
+      <div class="field"><label for="f-task">업무 지시</label><textarea class="input" id="f-task" placeholder="예: ${esc(r.ex[0])}">${esc(dr.task || "")}</textarea></div>
+      <div class="sugs">${r.ex.map(x => `<button class="sug" data-sug="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+      <div class="row"><button class="btn primary" id="assign">업무 지시하기</button><span class="muted" style="font-size:12px" id="assignNote"></span></div>
+      <div class="sect-h"><h3>${esc(a.name)}의 업무</h3></div>
+      <div class="list" id="agentTasks"></div>`;
+  } else if (tab === "projects") {
+    const p = editProject && editProject !== "new" ? { id: editProject, ...(S.projects.get(editProject) || {}) } : {};
+    b.innerHTML = `
+      <div class="note">비서들은 여기 적은 목표와 메모를 읽고 일해요. 지금 수익화하려는 일을 하나씩 등록해 주세요. 자세할수록 결과물이 좋아져요.</div>
+      ${editProject ? `<div class="box" style="padding:12px;display:grid;gap:10px;box-shadow:none">
+        <h3 style="font-size:17px">${editProject === "new" ? "새 프로젝트" : "프로젝트 수정"}</h3>
+        <div class="field"><label for="p-name">이름</label><input class="input" id="p-name" value="${esc(p.name)}" placeholder="예: 스마트스토어 문구 굿즈"></div>
+        <div class="field"><label for="p-goal">목표</label><input class="input" id="p-goal" value="${esc(p.goal)}" placeholder="예: 3개월 안에 월 매출 300만 원"></div>
+        <div class="field"><label for="p-rev">수익 방식</label><input class="input" id="p-rev" value="${esc(p.revenue)}" placeholder="예: 제품 판매, 광고 수익, 구독"></div>
+        <div class="field"><label for="p-notes">현재 상황·메모</label><textarea class="input" id="p-notes" placeholder="예: 상품 5개 등록, 하루 방문 40명, 광고는 아직 안 함">${esc(p.notes)}</textarea></div>
+        <div class="row"><button class="btn primary" id="p-save">저장</button><button class="btn ghost" id="p-cancel">취소</button></div></div>`
+      : `<div class="row"><button class="btn primary" id="p-new">+ 프로젝트 추가</button></div>`}
+      <div class="list" id="projList"></div>`;
+  } else b.innerHTML = `<div class="list" id="dynList"></div>`;
+  renderPanelDynamic();
+}
+function taskItem(t, showAgent = true) {
+  const a = S.agents.get(t.agentId), p = S.projects.get(t.projectId), st = taskState(t);
+  const pv = running.get(t.id)?.text || t.result || t.error || "";
+  return `<button class="item" data-task="${esc(t.id)}"><span class="t">${esc(t.title)}</span>
+    <span class="meta"><span class="chip s-${st}">${STATUS_LABEL[st] || st}</span>${showAgent ? `<span>${esc(a?.name || "퇴사한 비서")}</span>` : ""}${p ? `<span>· ${esc(p.name)}</span>` : ""}<span>· ${ago(t.finishedAt || t.createdAt)}</span></span>
+    ${pv ? `<span class="pv">${esc(pv.slice(0, 160))}</span>` : ""}</button>`;
+}
+function renderPanelDynamic() {
+  renderTabs();
+  if (!S.ready) return;
+  const ts = tasksSorted();
+  const noClaude = !sample ? `<div class="note">Claude 연결이 없는 화면이에요. 업무는 대기열에 쌓이고, claude.ai에서 이 페이지를 열면 비서들이 처리해요.</div>` : "";
+  if (tab === "agent") {
+    const a = selected && S.agents.get(selected) ? { id: selected, ...S.agents.get(selected) } : null; if (!a) return;
+    const xp = a.xp || 0, en = a.energy ?? 100;
+    const s1 = $("#agentStats");
+    if (s1) s1.innerHTML = `<div style="display:grid;gap:6px">
+      <div class="meter"><span>Lv.${lvl(xp)}</span><div class="bar"><i style="width:${xp % 100}%"></i></div><span class="num" style="font-size:11px">${xp % 100}/100</span></div>
+      <div class="meter"><span>체력</span><div class="bar energy${en < 30 ? " low" : ""}"><i style="width:${en}%"></i></div><span class="num" style="font-size:11px">${en}</span></div></div>`;
+    const bt = $("#agentBtns");
+    if (bt) bt.innerHTML = `<button class="btn${a.onDuty ? "" : " primary"}" id="dutyBtn">${a.onDuty ? "퇴근시키기" : "출근시키기"}</button>
+      <button class="btn" id="coffee"${!a.onDuty || en >= 100 ? " disabled" : ""}>커피 주기</button>
+      <button class="btn ghost danger" id="fire">내보내기</button>`;
+    const fb = $("#fireBox");
+    if (fb) fb.innerHTML = confirmFire ? `<div class="confirm"><span>${esc(a.name)}을(를) 내보낼까요? 업무 기록은 남아요.</span><button class="btn sm danger" id="fireYes">내보내기</button><button class="btn sm ghost" id="fireNo">취소</button></div>` : "";
+    const note = $("#assignNote");
+    if (note) note.textContent = !a.onDuty ? "퇴근 상태예요. 지시하면 출근 후 처리해요." : !sample ? "Claude 연결 없음: 대기열에 저장돼요." : "";
+    const mine = ts.filter(t => t.agentId === a.id).slice(0, 15);
+    const el = $("#agentTasks");
+    if (el) el.innerHTML = mine.length ? mine.map(t => taskItem(t, false)).join("") : `<div class="empty"><p>아직 맡긴 업무가 없어요.</p></div>`;
+    const big = $("#bigSprite"); if (big) big.dataset.st = agentState(a).s === "off" ? "off" : agentState(a).s;
+  } else if (tab === "inbox") {
+    const rv = ts.filter(t => t.status === "review");
+    const attn = ts.filter(t => ["stuck", "failed", "stopped"].includes(taskState(t)));
+    const q = ts.filter(t => t.status === "queued");
+    const work = ts.filter(t => running.has(t.id));
+    $("#dynList").innerHTML = `${noClaude}
+      ${q.length && sample && !pumpArmed ? `<div class="note row" style="justify-content:space-between"><span>대기 중인 업무 ${q.length}건이 있어요.</span><button class="btn sm primary" id="startQueue">지금 시작</button></div>` : ""}
+      <div class="sect-h"><h3>결재 대기</h3><span class="muted">${rv.length}건</span></div>
+      ${rv.length ? rv.map(t => taskItem(t)).join("") : `<div class="empty"><p>결재할 결과물이 없어요.<br>비서를 눌러 업무를 지시하거나, 상단의 <b>아침 회의</b>로 한 번에 배정해 보세요.</p></div>`}
+      ${work.length ? `<div class="sect-h"><h3>작업 중</h3><span class="muted">${work.length}건</span></div>${work.map(t => taskItem(t)).join("")}` : ""}
+      ${q.length ? `<div class="sect-h"><h3>대기</h3><span class="muted">${q.length}건</span></div>${q.map(t => taskItem(t)).join("")}` : ""}
+      ${attn.length ? `<div class="sect-h"><h3>확인 필요</h3><span class="muted">${attn.length}건</span></div>${attn.map(t => taskItem(t)).join("")}` : ""}`;
+  } else if (tab === "log") {
+    const done = ts.filter(t => t.status === "done");
+    $("#dynList").innerHTML = `<div class="sect-h"><h3>승인한 결과물</h3><span class="muted">${done.length}건</span></div>
+      ${done.length ? done.slice(0, 60).map(t => taskItem(t)).join("") : `<div class="empty"><p>승인한 업무가 여기에 쌓여요.</p></div>`}
+      <div class="sect-h"><h3>전체 업무</h3><span class="muted">${ts.length}건</span></div>${ts.slice(0, 40).map(t => taskItem(t)).join("")}`;
+  } else if (tab === "projects") {
+    const ps = projectsSorted();
+    const el = $("#projList"); if (!el) return;
+    el.innerHTML = ps.length ? ps.map(p => {
+      const n = ts.filter(t => t.projectId === p.id), dn = n.filter(t => t.status === "done").length;
+      return `<div class="item" style="cursor:default"><span class="t">${esc(p.name)}${p.example ? ` <span class="chip">예시</span>` : ""}</span>
+        ${p.goal ? `<span style="font-size:13px">목표: ${esc(p.goal)}</span>` : ""}
+        ${p.revenue ? `<span class="muted" style="font-size:12.5px">수익 방식: ${esc(p.revenue)}</span>` : ""}
+        ${p.notes ? `<span class="pv">${esc(p.notes)}</span>` : ""}
+        <span class="meta"><span>업무 ${n.length}건 · 승인 ${dn}건</span></span>
+        <div class="row"><button class="btn sm" data-pedit="${esc(p.id)}">수정</button>${n.length ? "" : `<button class="btn sm ghost danger" data-pdel="${esc(p.id)}">삭제</button>`}</div></div>`;
+    }).join("") : `<div class="empty"><p>등록된 프로젝트가 없어요.</p></div>`;
+  }
+}
+
+/* ---------- work ---------- */
+function taskPrompt(t) {
+  const a = S.agents.get(t.agentId) || {}, r = ROLE[a.role] || ROLES[0], p = S.projects.get(t.projectId);
+  const company = S.meta.companyName || "내 AI 오피스";
+  return `너는 1인 사업가인 사장님을 돕는 "${company}"의 AI 비서 "${a.name}"이고, 담당은 ${r.title}(${r.desc})이다.
+
+${p ? `[프로젝트] ${p.name}\n- 목표: ${p.goal || "미정"}\n- 수익 방식: ${p.revenue || "미정"}\n- 현재 상황·메모: ${p.notes || "없음"}` : "[프로젝트] 지정 없음"}
+
+[사장님 지시]
+${t.title}
+${t.feedback ? `\n[이전 결과물]\n${String(t.prevResult || "").slice(0, 6000)}\n\n[사장님 반려 피드백]\n${t.feedback}\n피드백을 반영해 결과물을 처음부터 다시 완성하라.\n` : ""}
+[작성 규칙]
+- 한국어로, 사장님이 바로 쓰거나 실행할 수 있는 완성된 결과물을 낸다. 계획만 말하지 말고 실제 산출물(문구, 표, 목록, 초안)을 쓴다.
+- 실제 수치나 최신 정보처럼 모르는 사실은 지어내지 말고 '확인 필요'로 표시하고, 가정은 가정이라고 밝힌다.
+- 첫 줄은 한 문장 요약. 소제목은 '## ', 목록은 '- '를 쓴다.
+- 마지막에 '## 다음 제안' 아래 이어서 할 일 2개를 적는다.
+- 분량은 1,500자 안팎, 필요하면 더 길어도 된다.`;
+}
+async function runTask(id) {
+  const t0 = S.tasks.get(id); if (!t0 || running.has(id)) return;
+  const ctl = new AbortController(); running.set(id, { ctl, text: "" });
+  const t = { id, ...t0 };
+  await patch("tasks", id, { status: "working", startedAt: now(), error: null });
+  updateBubbles(); renderHeader(); renderPanelDynamic(); refreshModal(id);
+  try {
+    const res = await sample(taskPrompt(t), {
+      signal: ctl.signal, cache: false,
+      onText: ({ text }) => { const r = running.get(id); if (r) r.text = text; updateBubbles(); liveModal(id, text); },
+    });
+    running.delete(id);
+    await patch("tasks", id, { status: "review", result: res.text + (res.truncated ? "\n\n(분량 제한으로 여기서 끊겼어요. 나눠서 지시해 주세요.)" : ""), finishedAt: now() });
+    const a = S.agents.get(t.agentId); if (a) await patch("agents", t.agentId, { energy: Math.max(0, (a.energy ?? 100) - 12) });
+    toast(`${a?.name || "비서"}: 결재 올렸어요!`);
+  } catch (e) {
+    const partial = e && e.text ? e.text : "";
+    running.delete(id);
+    if (e && e.code === "cancelled") await patch("tasks", id, { status: "stopped", result: partial, finishedAt: now() });
+    else {
+      const msg = { not_granted: "Claude 사용을 허용하지 않아 업무를 못 했어요.", rate_limited: "Claude 사용량이 많아요. 잠시 뒤 다시 시작해 주세요.", sampling_disabled: "이 계정에서는 Claude를 쓸 수 없어요.", refused: "이 지시는 처리할 수 없다고 해요. 지시를 바꿔 주세요.", session_expired: "다시 로그인해 주세요." }[e && e.code] || "작업 중 연결이 끊겼어요. 다시 시작해 주세요.";
+      await patch("tasks", id, { status: "failed", error: msg, result: partial, finishedAt: now() });
+      if (e && (e.code === "not_granted" || e.code === "sampling_disabled")) { sample = null; pumpArmed = false; }
+      if (e && e.code === "rate_limited") pumpArmed = false;
+      toast(msg);
+    }
+  } finally { renderAll(); refreshModal(id); pump(); }
+}
+function pump() {
+  if (!sample || !pumpArmed) return;
+  const busyAgents = new Set([...running.keys()].map(id => S.tasks.get(id)?.agentId));
+  const q = tasksSorted().filter(t => t.status === "queued" && S.agents.get(t.agentId)?.onDuty).reverse();
+  for (const t of q) {
+    if (running.size >= 2) break;
+    if (busyAgents.has(t.agentId)) continue;
+    busyAgents.add(t.agentId); runTask(t.id);
+  }
+}
+async function assign(agentId, projectId, title, source = "manual") {
+  const id = uid("t_");
+  await put("tasks", id, { agentId, projectId: projectId || null, title, status: "queued", source, createdAt: now() });
+  return id;
+}
+
+/* ---------- modals ---------- */
+let modalTask = null;
+function closeModal() { $("#modalRoot").innerHTML = ""; modalTask = null; }
+function openTask(id) { modalTask = id; refreshModal(id, true); }
+function refreshModal(id, force) {
+  if (modalTask !== id && !force) return;
+  const t0 = S.tasks.get(id); if (!t0) { closeModal(); return; }
+  const t = { id, ...t0 }, st = taskState(t), a = S.agents.get(t.agentId), p = S.projects.get(t.projectId);
+  const live = running.get(id);
+  const keepFb = $("#fb")?.value || "", keepScroll = $(".modal-b")?.scrollTop || 0;
+  const body = live ? (live.text ? md(live.text) : `<p class="thinking">${esc(a?.name || "비서")}이(가) 생각하는 중…</p>`) : (t.result ? md(t.result) : `<p class="muted">${st === "queued" ? "아직 시작 전이에요." : "결과물이 없어요."}</p>`);
+  $("#modalRoot").innerHTML = `<div class="overlay" id="ov"><div class="modal box" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <div class="modal-h"><div style="display:grid;gap:6px;min-width:0"><h2 id="mt">${esc(t.title)}</h2>
+      <div class="row muted" style="font-size:12.5px"><span class="chip s-${st}">${STATUS_LABEL[st] || st}</span><span>${esc(a?.name || "퇴사한 비서")} · ${esc(ROLE[a?.role]?.title || "")}</span>${p ? `<span>· ${esc(p.name)}</span>` : ""}<span>· ${ago(t.finishedAt || t.createdAt)}</span></div></div>
+      <button class="btn ghost" data-close>닫기</button></div>
+    <div class="modal-b">${t.error ? `<div class="note" style="border-color:var(--bad)">${esc(t.error)}</div>` : ""}${t.feedback && st !== "review" && st !== "done" ? `<div class="note">반려 피드백: ${esc(t.feedback)}</div>` : ""}
+      <div class="doc" id="docBody">${body}</div>
+      ${st === "review" ? `<div class="field"><label for="fb">반려하고 다시 시키기 (피드백)</label><textarea class="input" id="fb" placeholder="예: 더 짧게, 20대 여성 타깃 말투로, 표로 정리해 줘"></textarea></div>` : ""}</div>
+    <div class="modal-f">
+      ${live ? `<button class="btn" id="m-stop">멈추기</button>` : ""}
+      ${t.result || live?.text ? `<button class="btn" id="m-copy">복사</button>` : ""}
+      ${["stuck", "failed", "stopped", "queued"].includes(st) && !live ? `<button class="btn primary" id="m-retry">${st === "queued" ? "지금 시작" : "다시 시작"}</button>` : ""}
+      ${st === "review" ? `<button class="btn" id="m-reject">반려하고 다시</button><button class="btn primary" id="m-ok">승인</button>` : ""}
+      ${!live ? `<button class="btn ghost danger" id="m-del">기록 삭제</button>` : ""}
+    </div></div></div>`;
+  if (keepFb && $("#fb")) $("#fb").value = keepFb;
+  if (keepScroll && $(".modal-b")) $(".modal-b").scrollTop = keepScroll;
+}
+function liveModal(id, text) { if (modalTask !== id) return; const el = $("#docBody"); if (el) el.innerHTML = md(text); }
+
+function openHire(dept) {
+  let pick = ROLES.find(r => !dept || r.dept === dept)?.key || ROLES[0].key;
+  const used = new Set(agentsSorted().map(a => a.name));
+  const name = NAMES.filter(n => !used.has(n))[Math.floor(Math.random() * 20)] || "새 비서";
+  const draw = () => {
+    $("#modalRoot").innerHTML = `<div class="overlay" id="ov"><div class="modal box" role="dialog" aria-modal="true" aria-labelledby="ht">
+      <div class="modal-h"><div><h2 id="ht">비서 채용</h2><div class="muted" style="font-size:12.5px">현재 ${S.agents.size}명 · 최대 ${MAX_STAFF}명</div></div><button class="btn ghost" data-close>닫기</button></div>
+      <div class="modal-b"><div class="field"><label for="h-name">이름</label><input class="input" id="h-name" value="${esc($("#h-name")?.value || name)}" maxlength="12"></div>
+        ${DEPTS.map(d => `<div style="display:grid;gap:6px"><div class="row"><span class="chip dept-chip" style="background:${d.color}">${esc(d.name)}</span></div>
+          <div class="roles">${ROLES.filter(r => r.dept === d.id).map(r => `<button class="role-opt" data-role="${r.key}" aria-pressed="${pick === r.key}"><b>${esc(r.title)}</b><small>${esc(r.desc)}</small></button>`).join("")}</div></div>`).join("")}</div>
+      <div class="modal-f"><button class="btn primary" id="h-go"${S.agents.size >= MAX_STAFF ? " disabled" : ""}>채용하고 출근시키기</button></div></div></div>`;
+  };
+  draw();
+  $("#modalRoot").onclick = async e => {
+    const ro = e.target.closest("[data-role]"); if (ro) { pick = ro.dataset.role; draw(); return; }
+    if (e.target.closest("[data-close]") || e.target.id === "ov") { $("#modalRoot").onclick = null; closeModal(); return; }
+    if (e.target.closest("#h-go")) {
+      const nm = ($("#h-name").value || "").trim().slice(0, 12) || "새 비서";
+      const id = uid("a_");
+      await put("agents", id, { name: nm, role: pick, onDuty: true, xp: 0, energy: 100, hiredAt: now() });
+      $("#modalRoot").onclick = null; closeModal(); selected = id; tab = "agent"; renderAll(true);
+      toast(`${nm} 님이 입사했어요!`);
+    }
+  };
+}
+
+let meetingCtl = null;
+async function openMeeting() {
+  const on = agentsSorted().filter(a => a.onDuty), ps = projectsSorted();
+  const shell = inner => { $("#modalRoot").innerHTML = `<div class="overlay" id="ov"><div class="modal box" role="dialog" aria-modal="true" aria-labelledby="mt2">
+    <div class="modal-h"><div><h2 id="mt2">아침 회의</h2><div class="muted" style="font-size:12.5px">출근한 비서 ${on.length}명에게 프로젝트에 맞는 업무를 하나씩 배정해요.</div></div><button class="btn ghost" data-close>닫기</button></div>${inner}</div></div>`; };
+  if (!on.length) { shell(`<div class="modal-b"><div class="empty"><p>출근한 비서가 없어요. 먼저 <b>전체 출근</b>을 눌러 주세요.</p></div></div>`); return; }
+  if (!ps.length) { shell(`<div class="modal-b"><div class="empty"><p>회의할 프로젝트가 없어요. 프로젝트 탭에서 지금 하는 일을 먼저 등록해 주세요.</p></div></div>`); return; }
+  if (!sample) { shell(`<div class="modal-b"><div class="note">Claude 연결이 없는 화면이라 회의를 열 수 없어요. claude.ai에서 이 페이지를 열어 주세요.</div></div>`); return; }
+  shell(`<div class="modal-b"><p class="thinking">회의실에 모이는 중… 각자 맡을 일을 정하고 있어요. (보통 20~60초)</p></div><div class="modal-f"><button class="btn" id="mt-cancel">회의 취소</button></div>`);
+  const recent = tasksSorted().filter(t => t.status === "done" || t.status === "review").slice(0, 25).map(t => `- ${t.title}`).join("\n") || "- 없음";
+  const prompt = `너는 1인 사업가의 AI 비서팀 아침 회의를 진행한다. 오늘 출근한 비서마다 역할에 맞는 업무를 정확히 1개씩 배정하라.
+
+[프로젝트]
+${ps.map(p => `- id=${p.id} | ${p.name} | 목표: ${p.goal || "미정"} | 수익 방식: ${p.revenue || "미정"} | 메모: ${(p.notes || "").slice(0, 400)}`).join("\n")}
+
+[출근한 비서]
+${on.map(a => `- id=${a.id} | ${a.name} | ${ROLE[a.role]?.title}: ${ROLE[a.role]?.desc}`).join("\n")}
+
+[최근 이미 한 업무 — 겹치지 않게]
+${recent}
+
+규칙:
+- 업무는 한두 문장, 결과물이 분명하게(무엇을 몇 개, 어떤 형식으로). 오늘 안에 끝낼 수 있는 크기.
+- 프로젝트는 그 비서 역할에 가장 도움이 되는 것을 고른다. 수익에 가까운 일을 우선한다.
+- JSON 배열만 답한다: [{"agentId":"...","projectId":"...","task":"..."}]`;
+  meetingCtl = new AbortController();
+  let plan;
+  try { plan = await sample.json(prompt, { signal: meetingCtl.signal, cache: false }); }
+  catch (e) {
+    if (e && e.code === "cancelled") return;
+    if (!$("#mt2")) return;
+    shell(`<div class="modal-b"><div class="note">${e && e.code === "rate_limited" ? "Claude 사용량이 많아요. 잠시 뒤 다시 열어 주세요." : e && e.code === "not_granted" ? "Claude 사용을 허용해야 회의를 열 수 있어요." : "회의 결과를 받지 못했어요. 다시 열어 주세요."}</div></div>`); return;
+  }
+  if (!$("#mt2")) return;
+  const rows = (Array.isArray(plan) ? plan : []).filter(x => x && S.agents.has(String(x.agentId)) && x.task).map(x => ({ agentId: String(x.agentId), projectId: S.projects.has(String(x.projectId)) ? String(x.projectId) : "", task: String(x.task).slice(0, 500) }));
+  if (!rows.length) { shell(`<div class="modal-b"><div class="note">배정안을 읽지 못했어요. 다시 열어 주세요.</div></div>`); return; }
+  shell(`<div class="modal-b"><div class="note">고칠 업무는 바로 고치고, 뺄 업무는 체크를 끄세요.</div>${rows.map((r, i) => {
+    const a = S.agents.get(r.agentId);
+    return `<div class="prop"><input type="checkbox" id="mc-${i}" checked aria-label="${esc(a.name)} 업무 포함">
+      <div style="display:grid;gap:6px;min-width:0"><div class="row" style="font-size:13px"><b>${esc(a.name)}</b><span class="muted">${esc(ROLE[a.role]?.title)}</span>
+        <select class="input" id="mp-${i}" style="width:auto;padding:2px 6px;font-size:12px">${projectOptions(r.projectId)}</select></div>
+        <textarea class="input" id="mx-${i}">${esc(r.task)}</textarea></div></div>`;
+  }).join("")}</div><div class="modal-f"><button class="btn primary" id="mt-go">선택한 업무 지시하기</button></div>`);
+  $("#mt-go").onclick = async () => {
+    let n = 0;
+    for (let i = 0; i < rows.length; i++) {
+      if (!$("#mc-" + i).checked) continue;
+      const txt = $("#mx-" + i).value.trim(); if (!txt) continue;
+      await assign(rows[i].agentId, $("#mp-" + i).value, txt, "meeting"); n++;
+    }
+    closeModal(); pumpArmed = true; tab = "inbox"; renderAll(true); pump();
+    toast(`업무 ${n}건을 배정했어요. 동시에 2건씩 처리해요.`);
+  };
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", async e => {
+  const el = e.target;
+  if (el.closest("#modalRoot") && $("#modalRoot").onclick) return;
+  const desk = el.closest("[data-agent]");
+  if (desk) { selected = desk.dataset.agent; tab = "agent"; confirmFire = false; renderAll(true); if (innerWidth <= 980) $("#panel").scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); return; }
+  if (el.closest("[data-act=hire]")) { if (S.agents.size >= MAX_STAFF) { toast(`비서는 최대 ${MAX_STAFF}명까지예요.`); return; } openHire(el.closest("[data-act=hire]").dataset.dept); return; }
+  if (el.closest("#starter")) {
+    const base = now();
+    for (let i = 0; i < STARTER.length; i++) await put("agents", uid("a_"), { name: STARTER[i][0], role: STARTER[i][1], onDuty: false, xp: 0, energy: 100, hiredAt: base + i });
+    toast("기본 팀 12명이 입사했어요. 전체 출근을 눌러 보세요!"); return;
+  }
+  const tb = el.closest("[data-tab]"); if (tb) { tab = tb.dataset.tab; editProject = null; renderPanel(); return; }
+  const ti = el.closest("[data-task]"); if (ti) { openTask(ti.dataset.task); return; }
+  const sg = el.closest("[data-sug]"); if (sg) { const ta = $("#f-task"); ta.value = sg.dataset.sug; drafts[selected] = { ...(drafts[selected] || {}), task: ta.value }; ta.focus(); return; }
+  const pe = el.closest("[data-pedit]"); if (pe) { editProject = pe.dataset.pedit; renderPanel(); return; }
+  const pd = el.closest("[data-pdel]"); if (pd) { await del("projects", pd.dataset.pdel); toast("프로젝트를 삭제했어요."); return; }
+  if (el.closest("[data-close]") || el.id === "ov") { if (meetingCtl) { meetingCtl.abort(); meetingCtl = null; } closeModal(); return; }
+  const id = el.closest("button")?.id;
+  const a = selected ? S.agents.get(selected) : null;
+  switch (id) {
+    case "allIn": { const off = agentsSorted().filter(x => !x.onDuty); for (const x of off) await patch("agents", x.id, { onDuty: true, energy: 100, dutyAt: now() }); toast(off.length ? `${off.length}명 출근!` : "모두 이미 출근했어요."); break; }
+    case "allOut": { const busy = agentsSorted().filter(x => x.onDuty); let n = 0; for (const x of busy) { if ([...running.keys()].some(k => S.tasks.get(k)?.agentId === x.id)) continue; await patch("agents", x.id, { onDuty: false }); n++; } toast(n ? `${n}명 퇴근. 수고했어요!` : "작업 중인 비서는 일을 마치고 퇴근해요."); break; }
+    case "meetingBtn": openMeeting(); break;
+    case "mt-cancel": if (meetingCtl) { meetingCtl.abort(); meetingCtl = null; } closeModal(); break;
+    case "hireBtn": if (S.agents.size >= MAX_STAFF) toast(`비서는 최대 ${MAX_STAFF}명까지예요.`); else openHire(); break;
+    case "brandBtn": {
+      const cur = S.meta.companyName || "내 AI 오피스";
+      $("#brandBtn").outerHTML = `<form id="nameForm" class="row"><input class="input" id="nameIn" value="${esc(cur)}" maxlength="20" style="width:200px"><button class="btn sm primary">저장</button></form>`;
+      $("#nameIn").focus(); $("#nameIn").select();
+      $("#nameForm").onsubmit = async ev => { ev.preventDefault(); const v = $("#nameIn").value.trim().slice(0, 20) || "내 AI 오피스"; $("#nameForm").outerHTML = `<button class="brand-name" id="brandBtn" title="회사 이름 바꾸기"><h1 id="companyName"></h1><small>사장님 전용 비서실 · <span class="clock" id="clock">--:--</span></small></button>`; await putMeta({ companyName: v }); renderHeader(); renderSky(); };
+      break;
+    }
+    case "dutyBtn": if (a) { if (a.onDuty && [...running.keys()].some(k => S.tasks.get(k)?.agentId === selected)) { toast("작업을 마친 뒤에 퇴근시킬 수 있어요."); break; } await patch("agents", selected, a.onDuty ? { onDuty: false } : { onDuty: true, energy: 100, dutyAt: now() }); if (!a.onDuty) pump(); } break;
+    case "coffee": if (a) { await patch("agents", selected, { energy: Math.min(100, (a.energy ?? 100) + 25) }); toast(`${a.name}: 커피 고마워요!`); } break;
+    case "fire": confirmFire = true; renderPanelDynamic(); break;
+    case "fireNo": confirmFire = false; renderPanelDynamic(); break;
+    case "fireYes": if (a) { const nm = a.name; await del("agents", selected); selected = null; confirmFire = false; renderAll(true); toast(`${nm} 님을 내보냈어요.`); } break;
+    case "assign": {
+      if (!a) break; const txt = $("#f-task").value.trim(); if (!txt) { toast("무슨 일을 시킬지 적어 주세요."); $("#f-task").focus(); break; }
+      const pid = $("#f-project").value;
+      await assign(selected, pid, txt); drafts[selected] = { project: pid }; $("#f-task").value = "";
+      if (pid !== (S.meta.lastProject || "")) putMeta({ lastProject: pid });
+      if (!a.onDuty) await patch("agents", selected, { onDuty: true, energy: 100, dutyAt: now() });
+      pumpArmed = true; pump(); toast(sample ? `${a.name}에게 지시했어요.` : "대기열에 저장했어요.");
+      break;
+    }
+    case "startQueue": pumpArmed = true; pump(); renderPanelDynamic(); break;
+    case "p-new": editProject = "new"; renderPanel(); break;
+    case "p-cancel": editProject = null; renderPanel(); break;
+    case "p-save": {
+      const name = $("#p-name").value.trim(); if (!name) { toast("프로젝트 이름을 적어 주세요."); break; }
+      const pid = editProject === "new" ? uid("p_") : editProject, prev = S.projects.get(pid) || {};
+      await put("projects", pid, { name: name.slice(0, 60), goal: $("#p-goal").value.trim().slice(0, 200), revenue: $("#p-rev").value.trim().slice(0, 200), notes: $("#p-notes").value.trim().slice(0, 2000), createdAt: prev.createdAt || now() });
+      editProject = null; renderPanel(); toast("프로젝트를 저장했어요."); break;
+    }
+    // task modal
+    case "m-stop": running.get(modalTask)?.ctl.abort(); break;
+    case "m-copy": {
+      const txt = running.get(modalTask)?.text || S.tasks.get(modalTask)?.result || "";
+      navigator.clipboard.writeText(txt).then(() => toast("복사했어요."), () => { const r = document.createRange(); r.selectNodeContents($("#docBody")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("선택했어요. 복사 단축키를 눌러 주세요."); });
+      break;
+    }
+    case "m-retry": { const tid = modalTask; await patch("tasks", tid, { status: "queued", error: null }); const ag = S.agents.get(S.tasks.get(tid)?.agentId); if (ag && !ag.onDuty) await patch("agents", S.tasks.get(tid).agentId, { onDuty: true, energy: 100 }); pumpArmed = true; pump(); refreshModal(tid); break; }
+    case "m-ok": {
+      const tid = modalTask, t = S.tasks.get(tid); if (!t) break;
+      await patch("tasks", tid, { status: "done", approvedAt: now() });
+      const ag = S.agents.get(t.agentId);
+      if (ag) { const before = lvl(ag.xp); const xp = (ag.xp || 0) + 40; await patch("agents", t.agentId, { xp }); toast(lvl(xp) > before ? `${ag.name} 레벨 업! Lv.${lvl(xp)}` : `승인! ${ag.name} 경험치 +40`); }
+      closeModal(); break;
+    }
+    case "m-reject": {
+      const tid = modalTask, t = S.tasks.get(tid); const fb = $("#fb").value.trim();
+      if (!fb) { toast("어떻게 고칠지 피드백을 적어 주세요."); $("#fb").focus(); break; }
+      await patch("tasks", tid, { status: "queued", feedback: fb, prevResult: String(t.result || "").slice(0, 8000), result: "" });
+      pumpArmed = true; pump(); refreshModal(tid); toast("다시 작업시켰어요."); break;
+    }
+    case "m-del": { const tid = modalTask; closeModal(); await del("tasks", tid); toast("기록을 삭제했어요."); break; }
+  }
+});
+document.addEventListener("input", e => {
+  if (!selected) return;
+  if (e.target.id === "f-task") drafts[selected] = { ...(drafts[selected] || {}), task: e.target.value };
+  if (e.target.id === "f-project") drafts[selected] = { ...(drafts[selected] || {}), project: e.target.value };
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#ov")) { if (meetingCtl) { meetingCtl.abort(); meetingCtl = null; } $("#modalRoot").onclick = null; closeModal(); } });
+
+/* ---------- render orchestration ---------- */
+let lastPanelKey = "";
+function renderAll(forcePanel) {
+  renderHeader(); renderOffice();
+  const key = tab + "|" + selected + "|" + (selected && S.agents.has(selected)) + "|" + S.ready + "|" + editProject;
+  if (forcePanel || key !== lastPanelKey) { lastPanelKey = key; renderPanel(); } else renderPanelDynamic();
+  if (modalTask && !running.has(modalTask)) refreshModal(modalTask);
+  if (pumpArmed) pump();
+}
+
+drawLogo(); renderSky(); setInterval(renderSky, 30000);
+renderAll(true);
+requestAnimationFrame(loop);
+initStore();
+})();
+</script>
