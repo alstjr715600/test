@@ -200,8 +200,8 @@ const POCKET_IN=.06, POCKET_OUT=.43;  // 포크 구멍 좌우 범위 (중앙 받
 const DRUM_R=.28, DRUM_H=.88, DRUM_DX=.29;
 const E=path.end;
 const STANDS=[
- {name:'A',x:0,z:YARD.z0-.4-PAL.d/2,yaw:0,line:YARD.z0},
- {name:'B',x:E.x,z:E.z-.4-PAL.d/2,yaw:0,line:E.z},
+ {name:'A',x:0,z:YARD.z0-.05-PAL.d/2,yaw:0,line:YARD.z0}, // 팔레트 앞면이 적재선 5cm 안쪽
+ {name:'B',x:E.x,z:E.z-.05-PAL.d/2,yaw:0,line:E.z},
 ];
 for(const s of STANDS)s.drums=[{x:s.x-DRUM_DX,z:s.z},{x:s.x+DRUM_DX,z:s.z}];
 const standByName=n=>STANDS.find(s=>s.name===n);
