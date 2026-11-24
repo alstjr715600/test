@@ -67,6 +67,9 @@ canvas{display:block}
 #resLog .k{width:42px;flex:none;font-weight:700}#resLog .k.bad{color:var(--bad)}#resLog .k.warn{color:var(--warn)}
 #resLog .t{width:46px;flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
 #pauseMsg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:8;background:#0008;font-size:22px;font-weight:800;pointer-events:none}
+@media(hover:hover) and (pointer:fine){#controls{display:none}}
+body.touch #controls{display:block!important}
+#help.hide{display:none}
 @media(max-width:900px){#help{display:none}#centerMsg{max-width:calc(100vw - 40px);top:auto;bottom:108px;font-size:13px}#guide{top:auto;bottom:150px}}
 @media(max-width:700px){
  #left{width:180px;left:8px;top:8px;gap:6px}#minimap{width:180px;height:136px}#steps{font-size:11px;padding:8px 10px}#brand{display:none}
@@ -94,8 +97,10 @@ canvas{display:block}
  </div>
  <label class="opt"><input id="seatbelt" type="checkbox"> 좌석 안전띠 착용 (미착용 시 감점)</label>
  <label class="opt"><input id="assist" type="checkbox" checked> 정렬 보조 가이드 표시 (포크 높이·좌우 편차)</label>
+ <label class="opt"><input id="autolook" type="checkbox" checked> 운전석 시점: 후진 시 자동으로 뒤돌아보기</label>
+ <label class="opt"><input id="sound" type="checkbox" checked> 엔진·후진 경고음</label>
  <button class="primary" id="startBtn">시험 시작</button>
- <div class="note">조작: W/S 전진·후진 · A/D 조향(뒷바퀴) · Space 브레이크 · R/F 포크 상승·하강 · T/G 마스트 전경·후경 · Shift 미세 조작 · C 시점 · P 일시정지<br>
+ <div class="note">조작: W/S 전진·후진 · A/D 조향(뒷바퀴) · Space 브레이크 · R/F 포크 상승·하강 · T/G 마스트 전경·후경 · Shift 미세 조작 · C 시점 · 마우스 드래그 둘러보기 · M 소리 · P 일시정지<br>
  ※ 교육용 시뮬레이터입니다. 코스 형태·치수와 채점 기준은 공개된 수험 정보 요약을 바탕으로 근사한 것으로, Q-Net 공개문제 원문과 다를 수 있습니다.</div>
 </div></div>
 
@@ -126,8 +131,8 @@ canvas{display:block}
  <div id="guide" class="panel"></div>
  <div id="help" class="panel"><b>조작</b> <kbd>W</kbd><kbd>S</kbd> 전진·후진 <kbd>A</kbd><kbd>D</kbd> 조향 <kbd>Space</kbd> 브레이크<br>
  <kbd>R</kbd><kbd>F</kbd> 포크 상승·하강 <kbd>T</kbd><kbd>G</kbd> 마스트 전경·후경<br>
- <kbd>Shift</kbd> 누른 채 조작 = 미세 조작 · <kbd>C</kbd> 시점(3인칭/운전석/위) · <kbd>P</kbd> 일시정지<br>
- <span style="color:#f6b73c">팁</span> 뒷바퀴 조향이라 회전 시 차체 뒤쪽이 바깥으로 크게 돕니다.</div>
+ <kbd>Shift</kbd> 미세 조작 · <kbd>C</kbd> 시점(운전석/3인칭/위) · 드래그 둘러보기 · <kbd>M</kbd> 소리 · <kbd>P</kbd> 일시정지<br>
+ <kbd>H</kbd> 도움말 숨기기/보이기 · <span style="color:#f6b73c">팁</span> 뒷바퀴 조향이라 회전 시 차체 뒤쪽이 바깥으로 크게 돕니다.</div>
  <div id="controls" class="panel">
   <div class="row"><button class="btn" data-key="a">◀ 좌</button><button class="btn" data-key="w">▲ 전진</button><button class="btn" data-key="d">우 ▶</button></div>
   <div class="row"><button class="btn" data-key=" ">브레이크</button><button class="btn" data-key="s">▼ 후진</button><button class="btn" id="fineBtn">미세</button></div>
@@ -253,7 +258,7 @@ function label(text,x,z,size=1.6,color='#ffffff'){
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size/2),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
  m.rotation.x=-Math.PI/2;m.position.set(x,.02,z);scene.add(m);return m;
 }
-label('출발',0,17.2,2.4);label('A',2.2,5.0,1.4,'#f6d36b');label('B',E.x+1.05,E.z+.9,1.4,'#f6d36b');
+label('출발',0,17.9,2.4);label('A',2.2,5.0,1.4,'#f6d36b');label('B',E.x+1.05,E.z+.9,1.4,'#f6d36b');
 // 드럼 + 가이드
 function drumMesh(x,z){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);cyl(g,0,DRUM_H/2,0,DRUM_R,DRUM_H,M.drum,28);for(const y of [.29,.59])cyl(g,0,y,0,DRUM_R+.012,.025,M.drumTop,28);cyl(g,0,DRUM_H-.006,0,DRUM_R-.01,.012,M.drumTop,28);}
 for(const s of STANDS){for(const d of s.drums)drumMesh(d.x,d.z);
@@ -286,19 +291,54 @@ const forklift=new THREE.Group();scene.add(forklift);
  box(c,0,1.12,.42,.58,.14,.5,M.seat);box(c,0,1.42,.72,.56,.55,.12,M.seat); // 좌석
  for(const x of [-.5,.5]){for(const z of [-.62,.82]){box(c,x,1.55,z,.07,1.3,.07,M.dark)}}
  box(c,0,2.22,.1,1.1,.07,1.58,M.dark);for(let i=0;i<5;i++)box(c,0,2.27,-.55+i*.3,1.05,.03,.05,M.dark); // 헤드가드
- const col=box(c,0,1.18,-.32,.08,.5,.08,M.dark);col.rotation.x=.45;
- const sw=new THREE.Group();sw.position.set(0,1.42,-.22);sw.rotation.x=-1.1;c.add(sw);
- const ring=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,8,28),M.rubber);sw.add(ring);box(sw,0,0,0,.32,.03,.03,M.dark);
- const knob=cyl(sw,.13,0,-.04,.02,.07,M.steel,8);knob.rotation.x=Math.PI/2;forklift.userData.sw=sw;
- box(c,-.28,1.05,-.6,.05,.3,.05,M.dark);box(c,-.2,1.05,-.6,.05,.3,.05,M.dark); // 레버
- box(c,0,1.0,-.75,1.0,.22,.2,M.dark);
+}
+const cab=buildCab(forklift);
+function buildCab(c){
+ const U={};
+ // 대시보드 하우징
+ box(c,0,1.06,-.64,.98,.32,.26,M.dark);
+ const hood=box(c,0,1.29,-.55,.5,.1,.26,M.dark);hood.rotation.x=-.6;
+ box(c,0,1.47,-.53,.48,.03,.08,M.dark); // 차양
+ // 계기판 (실시간 캔버스)
+ const cv=document.createElement('canvas');cv.width=512;cv.height=256;U.clusterCanvas=cv;
+ U.clusterTex=new THREE.CanvasTexture(cv);U.clusterTex.colorSpace=THREE.SRGBColorSpace;U.clusterTex.anisotropy=4;
+ const cl=new THREE.Mesh(new THREE.PlaneGeometry(.42,.21),new THREE.MeshBasicMaterial({map:U.clusterTex,toneMapped:false}));
+ cl.position.set(0,1.36,-.44);cl.rotation.x=-.6;c.add(cl);
+ // 조향 칼럼 + 핸들 + 스피너 노브
+ const col=box(c,0,1.14,-.3,.07,.34,.07,M.dark);col.rotation.x=.8;
+ const sw=new THREE.Group();sw.position.set(0,1.27,-.12);sw.rotation.x=-1.15;c.add(sw);U.sw=sw;
+ sw.add(new THREE.Mesh(new THREE.TorusGeometry(.17,.02,10,36),M.rubber));
+ box(sw,0,0,0,.32,.025,.02,M.dark);box(sw,0,-.08,0,.025,.16,.02,M.dark);cyl(sw,0,0,0,.035,.03,M.steel,12).rotation.x=Math.PI/2;
+ const knob=cyl(sw,.12,.11,.035,.018,.07,mat(0xd23b2b,.4),10);knob.rotation.x=Math.PI/2;
+ // 전후진(FNR) 레버 - 칼럼 왼쪽
+ U.fnr=new THREE.Group();U.fnr.position.set(-.06,1.2,-.27);c.add(U.fnr);
+ const st=box(U.fnr,-.06,0,0,.13,.014,.014,M.dark);const fk=new THREE.Mesh(new THREE.SphereGeometry(.018,10,8),M.rubber);fk.position.set(-.13,0,0);U.fnr.add(fk);
+ // 유압 레버 (리프트 / 틸트) - 오른쪽 앞
+ box(c,.3,1.2,-.5,.2,.06,.12,M.dark);
+ U.levers=[];[[.25,0xe9eef2],[.34,0x1e2328]].forEach(([x,col])=>{const g=new THREE.Group();g.position.set(x,1.22,-.5);c.add(g);box(g,0,.11,0,.014,.22,.014,M.steel);
+  const k=new THREE.Mesh(new THREE.SphereGeometry(.026,12,10),mat(col,.35));k.position.y=.23;g.add(k);U.levers.push(g)});
+ // 페달: 인칭 / 브레이크 / 가속
+ U.pedals=[];[[-.2,.09],[-.06,.11],[.17,.07]].forEach(([x,w])=>{const g=new THREE.Group();g.position.set(x,.95,-.62);c.add(g);const pl=box(g,0,.07,.06,w,.018,.15,M.rubber);pl.rotation.x=-.9;box(g,0,.03,0,.02,.08,.02,M.dark);U.pedals.push(g)});
+ // 주차 브레이크 레버 (좌측)
+ U.park=new THREE.Group();U.park.position.set(-.45,1.0,-.2);c.add(U.park);box(U.park,0,.13,0,.03,.26,.03,M.dark);box(U.park,0,.27,0,.045,.07,.045,mat(0xc33,.5));U.park.rotation.x=-.4;
+ // 키 스위치
+ box(c,.2,1.2,-.47,.05,.05,.02,M.steel);
+ // 안전벨트 (착용 시 표시)
+ U.belt=new THREE.Group();c.add(U.belt);const b1=box(U.belt,0,1.27,.33,.62,.05,.012,mat(0xe86f1c,.6),false);b1.rotation.z=.18;box(U.belt,.29,1.24,.36,.05,.06,.05,M.steel,false);
+ // 미러, 경광등, 라이트
+ for(const x of [-.56,.56]){const m=box(c,x,1.98,-.66,.03,.14,.2,M.dark);const g=box(c,x+(x<0?.016:-.016),1.98,-.66,.004,.12,.18,new THREE.MeshStandardMaterial({color:0xb8d7e8,roughness:.05,metalness:.9}),false)}
+ for(const x of [-.5,.5])box(c,x,1.9,-.7,.12,.1,.06,new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff2c0,emissiveIntensity:.8}));
+ for(const x of [-.42,.42])box(c,x,.9,1.34,.14,.08,.03,new THREE.MeshStandardMaterial({color:0x661111,emissive:0xff2a1a,emissiveIntensity:.3}));
+ U.beaconMat=new THREE.MeshStandardMaterial({color:0xffa31a,emissive:0xff8800,emissiveIntensity:.2,transparent:true,opacity:.9});
+ cyl(c,0,2.33,.62,.06,.12,M.dark,12);const bc=new THREE.Mesh(new THREE.CylinderGeometry(.055,.065,.11,14),U.beaconMat);bc.position.set(0,2.44,.62);c.add(bc);
+ return U;
 }
 const wheelObjs=WHEELS.map(w=>{const pivot=new THREE.Group();pivot.position.set(w.x,w.r,w.z);forklift.add(pivot);
  const spin=new THREE.Group();pivot.add(spin);const t=new THREE.Mesh(new THREE.CylinderGeometry(w.r,w.r,.2,24),M.rubber);t.rotation.z=Math.PI/2;t.castShadow=true;spin.add(t);
  const h=new THREE.Mesh(new THREE.CylinderGeometry(w.r*.55,w.r*.55,.21,12),M.steel);h.rotation.z=Math.PI/2;spin.add(h);box(spin,0,w.r*.4,0,.215,.06,.06,M.dark,false);return{pivot,spin,...w}});
 const mast=new THREE.Group();mast.position.set(0,.3,MAST_Z);forklift.add(mast);
 for(const x of [-.4,.4])box(mast,x,1.0,.02,.09,2.0,.12,M.steel);box(mast,0,1.98,.02,.9,.08,.12,M.steel);box(mast,0,.1,.02,.9,.08,.12,M.steel);
-cyl(mast,0,.75,.1,.05,1.4,M.steel,12);
+cyl(mast,0,.65,.08,.035,1.2,M.steel,12);
 const inner=new THREE.Group();mast.add(inner);for(const x of [-.31,.31])box(inner,x,1.05,-.02,.07,1.9,.08,M.steel);box(inner,0,1.96,-.02,.7,.07,.08,M.steel);
 const carriage=new THREE.Group();mast.add(carriage);
 box(carriage,0,.22,-.05,.92,.36,.06,M.dark);
@@ -309,7 +349,7 @@ for(const s of [-1,1]){box(carriage,s*FORK_X,FORK_T/2,(ROOT_Z-MAST_Z)-FORK_L/2,F
 const S={x:0,z:0,th:0,v:0,steer:0,fb:0,tilt:0,spin:0};
 const P={x:0,z:0,yaw:0,pb:DRUM_H,holder:'A',rel:null};
 const G={running:false,paused:false,mode:'exam',assist:true,t:0,score:100,log:[],dq:false,crossed:false,seq:0,finished:false,
- cool:{},pcount:{},bandT:0,bandFlag:false,tiltT:0,finT:0,lineFlag:false,wasInPocket:false,view:0};
+ cool:{},pcount:{},bandT:0,bandFlag:false,tiltT:0,finT:0,lineFlag:false,wasInPocket:false,view:1,belt:false,autoLook:true};
 const keys={};
 const fwd=th=>({x:-Math.sin(th),z:-Math.cos(th)});
 const lw=(lx,lz)=>{const c=Math.cos(S.th),s=Math.sin(S.th);return{x:S.x+lx*c+lz*s,z:S.z-lx*s+lz*c}};
@@ -415,7 +455,7 @@ function groundDrop(){const pp=palletPose();Object.assign(P,{x:pp.x,z:pp.z,yaw:p
 function inZone(){ // 적재·하역 작업 구역 (포크 높이 주행 규칙 예외)
  const f=frontAxle();
  if(inYard(f.x,f.z,0)&&f.z<8)return'A';
- if(f.z<-5.5&&f.x>-2.5)return'B';
+ if(f.z<-4.0&&f.x>-2.6)return'B';
  return null;
 }
 
@@ -486,17 +526,86 @@ function update(dt){
 function syncMeshes(){
  forklift.position.set(S.x,0,S.z);forklift.rotation.y=S.th;
  for(const w of wheelObjs){if(w.st)w.pivot.rotation.y=S.steer*MAX_STEER;w.spin.rotation.x=-S.spin/w.r;}
- forklift.userData.sw.rotation.z=-S.steer*2.4;
+ cab.sw.rotation.z=-S.steer*2.4;animateCab();
  mast.rotation.x=S.tilt;carriage.position.y=S.fb-.3;inner.position.y=Math.max(0,S.fb-1.15);
  if(P.holder==='fork'){palletMesh.position.set(P.rel.lx,FORK_T-PAL.pocketTop,P.rel.lz-MAST_Z);palletMesh.rotation.set(0,P.rel.yaw,0)}
  else{palletMesh.position.set(P.x,P.pb,P.z);palletMesh.rotation.set(0,P.yaw,0)}
 }
+const CABS={lift:0,tilt:0,fnr:0,ped:[0,0,0],hours:1287.4,temp:.35,fuel:.78,lastDraw:0};
+function animateCab(){
+ const sm=(a,b)=>a+(b-a)*.25;
+ CABS.lift=sm(CABS.lift,keys.r?.4:keys.f?-.4:0);CABS.tilt=sm(CABS.tilt,keys.g?.4:keys.t?-.4:0);
+ cab.levers[0].rotation.x=CABS.lift;cab.levers[1].rotation.x=CABS.tilt;
+ const gear=S.v>.05||(keys.w&&!keys.s)?1:S.v<-.05||keys.s?-1:0;CABS.fnr=sm(CABS.fnr,-gear*.35);cab.fnr.rotation.x=CABS.fnr;
+ const pr=[keys.s&&S.v>.05?1:0,keys[' ']?1:0,(keys.w||keys.s)?1:0];
+ cab.pedals.forEach((g,i)=>{CABS.ped[i]=sm(CABS.ped[i],pr[i]);g.rotation.x=CABS.ped[i]*.3});
+ cab.park.rotation.x=G.running?-.4:.25;
+ cab.belt.visible=!!G.belt;
+ cab.beaconMat.emissiveIntensity=G.running&&(performance.now()%700<350)?2.2:.15;
+ const now=performance.now();if(now-CABS.lastDraw>90){CABS.lastDraw=now;drawCluster()}
+}
+function drawCluster(){
+ const cv=cab.clusterCanvas,g=cv.getContext('2d'),W=cv.width,H=cv.height;
+ if(G.running&&!G.paused){CABS.hours+=.09/3600*20;CABS.temp=Math.min(.62,CABS.temp+.0004);CABS.fuel=Math.max(.2,CABS.fuel-.00002)}
+ g.fillStyle='#05080b';g.fillRect(0,0,W,H);
+ g.strokeStyle='#39444d';g.lineWidth=6;g.strokeRect(3,3,W-6,H-6);
+ // 속도계
+ const cx=112,cy=132,r=92,a0=Math.PI*.75,a1=Math.PI*2.25,vmax=20;
+ g.lineWidth=10;g.strokeStyle='#1b2a33';g.beginPath();g.arc(cx,cy,r,a0,a1);g.stroke();
+ const km=Math.abs(S.v)*3.6;g.strokeStyle=km>9?'#ff6b5b':'#f6b73c';g.beginPath();g.arc(cx,cy,r,a0,a0+(a1-a0)*Math.min(1,km/vmax));g.stroke();
+ g.fillStyle='#9fb0bd';g.font='bold 15px system-ui';g.textAlign='center';g.textBaseline='middle';
+ for(let i=0;i<=vmax;i+=5){const a=a0+(a1-a0)*i/vmax;g.fillText(i,cx+Math.cos(a)*(r-24),cy+Math.sin(a)*(r-24))}
+ const na=a0+(a1-a0)*Math.min(1,km/vmax);g.strokeStyle='#ff4b3a';g.lineWidth=4;g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.cos(na)*(r-10),cy+Math.sin(na)*(r-10));g.stroke();
+ g.fillStyle='#ddd';g.beginPath();g.arc(cx,cy,7,0,7);g.fill();
+ g.fillStyle='#fff';g.font='bold 30px system-ui';g.fillText(km.toFixed(1),cx,cy+48);g.font='13px system-ui';g.fillStyle='#9fb0bd';g.fillText('km/h',cx,cy+70);
+ // LCD
+ const lx=222,ly=26,lw=170,lh=176;g.fillStyle='#0e2a26';g.fillRect(lx,ly,lw,lh);g.strokeStyle='#2f5d55';g.lineWidth=2;g.strokeRect(lx,ly,lw,lh);
+ const gear=S.v>.05?'F':S.v<-.05?'R':'N';g.font='bold 64px system-ui';g.fillStyle=gear==='R'?'#ff8a6b':gear==='F'?'#8dffc0':'#d8f5ea';g.fillText(gear,lx+42,ly+52);
+ g.textAlign='left';g.font='bold 15px system-ui';g.fillStyle='#bff5e1';
+ g.fillText('FORK',lx+86,ly+28);g.font='bold 26px system-ui';const fc=Math.round(S.fb*100);
+ g.fillStyle=(S.fb>RULES.travelHardMax&&!inZone())?'#ff8a6b':'#e6fff5';g.fillText(fc+'cm',lx+86,ly+56);
+ g.font='bold 15px system-ui';g.fillStyle='#bff5e1';g.fillText('TILT',lx+14,ly+104);g.fillText('TIME',lx+14,ly+134);
+ const deg=S.tilt*57.3;g.font='bold 20px system-ui';g.fillStyle='#e6fff5';g.fillText((deg>.5?'후경 ':deg<-.5?'전경 ':'')+Math.abs(deg).toFixed(1)+'°',lx+64,ly+105);
+ const rem=Math.max(0,RULES.timeLimit-G.t);g.fillText(`${Math.floor(rem/60)}:${String(Math.floor(rem%60)).padStart(2,'0')}`,lx+64,ly+135);
+ g.font='14px monospace';g.fillStyle='#7fb8a8';g.fillText('⌚ '+CABS.hours.toFixed(1).padStart(7,'0')+' h',lx+14,ly+163);
+ // 연료 / 냉각수
+ const bar=(x,v,lo,hi,lbl)=>{g.fillStyle='#1b2a33';g.fillRect(x,30,22,150);g.fillStyle=v<.25?'#ff6b5b':'#5fd38a';if(lbl==='℃')g.fillStyle=v>.85?'#ff6b5b':'#6fb8ff';g.fillRect(x,30+150*(1-v),22,150*v);
+  g.fillStyle='#9fb0bd';g.font='bold 13px system-ui';g.textAlign='center';g.fillText(hi,x+11,22);g.fillText(lo,x+11,192);g.font='16px system-ui';g.fillText(lbl,x+11,212)};
+ bar(420,CABS.fuel,'E','F','⛽');bar(466,G.running?CABS.temp+.2:.1,'C','H','℃');
+ // 경고등
+ const fine=!!keys.shift||fineSticky;const moving=Math.abs(S.v)>.15;
+ const band=S.fb>=RULES.travelMin-RULES.travelTol&&S.fb<=RULES.travelMax+RULES.travelTol;
+ const lamps=[['벨트',!G.belt,'#ff5050'],['P',!G.running,'#ff5050'],['오일',G.running&&G.t<1.2,'#ff5050'],['충전',G.running&&G.t<1.2,'#ff5050'],['포크',G.running&&moving&&!inZone()&&!band,'#ffb02e'],['미세',fine,'#5fd38a'],['후진',S.v<-.05,'#ffb02e']];
+ g.textAlign='center';g.font='bold 14px system-ui';
+ lamps.forEach(([t,on,c],i)=>{const x=30+i*56,y=236;g.fillStyle=on?c:'#1a232b';g.beginPath();g.roundRect?g.roundRect(x-24,y-13,48,26,6):g.rect(x-24,y-13,48,26);g.fill();g.fillStyle=on?'#111':'#4a5862';g.fillText(t,x,y+1)});
+ cab.clusterTex.needsUpdate=true;
+}
+const SND={ac:null,on:true};
+function soundInit(){if(SND.ac)return;try{const ac=new(window.AudioContext||window.webkitAudioContext)();const master=ac.createGain();master.gain.value=0;master.connect(ac.destination);
+ const mk=(type,f)=>{const o=ac.createOscillator();o.type=type;o.frequency.value=f;o.start();return o};
+ const o1=mk('sawtooth',34),o2=mk('square',51),lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=380;const eg=ac.createGain();eg.gain.value=.16;o1.connect(lp);o2.connect(lp);lp.connect(eg);eg.connect(master);
+ const h=mk('triangle',210),hg=ac.createGain();hg.gain.value=0;h.connect(hg);hg.connect(master);
+ const bp=mk('square',1150),bg=ac.createGain();bg.gain.value=0;bp.connect(bg);bg.connect(master);
+ Object.assign(SND,{ac,master,o1,o2,lp,hg,bg})}catch(e){}}
+function soundUpdate(){if(!SND.ac)return;const t=SND.ac.currentTime;const on=SND.on&&G.running&&!G.paused;SND.master.gain.setTargetAtTime(on?.22:0,t,.08);if(!on)return;
+ const thr=(keys.w||keys.s)?1:0,hyd=keys.r||keys.f||keys.t||keys.g;const rpm=30+Math.abs(S.v)*8+thr*12+(hyd?14:0);
+ SND.o1.frequency.setTargetAtTime(rpm,t,.12);SND.o2.frequency.setTargetAtTime(rpm*1.5,t,.12);SND.lp.frequency.setTargetAtTime(220+rpm*7,t,.12);
+ SND.hg.gain.setTargetAtTime(hyd?.035:0,t,.05);SND.bg.gain.setTargetAtTime(S.v<-.05&&performance.now()%900<450?.045:0,t,.01)}
 const camPos=new THREE.Vector3(0,8,26),camLook=new THREE.Vector3();
+const LOOK={yaw:0,pitch:0,head:0,drag:null};
 function cameraUpdate(dt,snap){
  const f=fwd(S.th);let pos,look;
- if(G.view===1){const e=lw(0,.38);pos=new THREE.Vector3(e.x,1.92,e.z);const l=lw(0,-4);look=new THREE.Vector3(l.x,.75,l.z);camera.up.set(0,1,0);camera.position.copy(pos);camera.lookAt(look);camPos.copy(pos);camLook.copy(look);return}
+ if(G.view===1){
+  const back=G.autoLook&&G.running&&(S.v<-.12||(keys.s&&S.v<.05&&!keys.w));
+  const tgt=(back?2.95:0)+LOOK.yaw;LOOK.head=snap?tgt:LOOK.head+(tgt-LOOK.head)*(1-Math.exp(-dt*4));
+  const turn=Math.min(1,Math.abs(LOOK.head)/2.8);
+  const e=lw(.04*turn,.38+.06*turn);pos=new THREE.Vector3(e.x,1.93+.05*turn,e.z);
+  const pitch=-.3+LOOK.pitch+turn*.1,yaw=S.th+LOOK.head;
+  look=new THREE.Vector3(pos.x-Math.sin(yaw)*Math.cos(pitch),pos.y+Math.sin(pitch),pos.z-Math.cos(yaw)*Math.cos(pitch));
+  camera.up.set(0,1,0);camera.position.copy(pos);camera.lookAt(look);camPos.copy(pos);camLook.copy(look);return}
  if(G.view===2){pos=new THREE.Vector3(S.x,15,S.z+.01);look=new THREE.Vector3(S.x,0,S.z);camera.up.set(0,0,-1)}
- else{pos=new THREE.Vector3(S.x-f.x*6.5,4.6,S.z-f.z*6.5);look=new THREE.Vector3(S.x+f.x*2,.9,S.z+f.z*2);camera.up.set(0,1,0)}
+ else{const c=Math.cos(LOOK.yaw),s=Math.sin(LOOK.yaw);const bx=-(f.x*c+f.z*s),bz=-(-f.x*s+f.z*c);const d=6.5,h=clamp(4.6-LOOK.pitch*6,1.8,9);
+  pos=new THREE.Vector3(S.x+bx*d,h,S.z+bz*d);look=new THREE.Vector3(S.x-bx*2,.9,S.z-bz*2);camera.up.set(0,1,0)}
  const k=snap?1:1-Math.exp(-dt*5);camPos.lerp(pos,k);camLook.lerp(look,k);camera.position.copy(camPos);camera.lookAt(camLook);
 }
 const STEP_TEXT=['출발 · 포크 20~30cm로 출발선 통과','A 드럼 위 팔레트 적재','전진 코스 주행 → B 드럼 하역','B에서 팔레트 재적재','후진 코스 주행 → A 원위치 하역','출발선 안 정지 · 포크 지면'];
@@ -558,6 +667,7 @@ function hud(){
  $('centerMsg').textContent=instruction();
  const gh=guideHTML();const gEl=$('guide');gEl.style.display=gh?'block':'none';if(gh&&gEl.innerHTML!==gh)gEl.innerHTML=gh;
  const cs=curStep();if(cs!==lastStep){lastStep=cs;renderSteps()}
+ $('dashboard').style.display=G.view===1?'none':'flex';soundUpdate();
 }
 // 미니맵
 const mm=$('minimap'),mg=mm.getContext('2d');
@@ -576,6 +686,7 @@ function drawMinimap(){
   mg.fillStyle='#f6d36b';mg.font=`bold ${Math.round(s*.9)}px system-ui`;const [a,b]=P2(st.x,st.z);mg.fillText(st.name,a-s*1.6,b+s*.3)}
  // 팔레트
  const pp=P.holder==='fork'?palletPose():P;const pc=P2(pp.x,pp.z);mg.save();mg.translate(...pc);mg.rotate(-pp.yaw);mg.fillStyle='#c08a52';mg.fillRect(-PAL.d/2*s,-PAL.w/2*s,PAL.d*s,PAL.w*s);mg.restore();
+ mg.fillStyle='#9fb0bd';mg.font=`bold ${Math.round(H*.06)}px system-ui`;mg.textAlign='left';mg.fillText('← 북(앞)',10,H*.08);mg.textAlign='start';
  // 지게차
  const c=P2(S.x,S.z);mg.save();mg.translate(...c);mg.rotate(-S.th);
  mg.fillStyle='#f2b12a';mg.fillRect(BODY.z0*s,-BODY.x*s,(BODY.z1-BODY.z0)*s,BODY.x*2*s);
@@ -587,9 +698,10 @@ function drawMinimap(){
 let toastTimer;function toast(t,kind=''){const el=$('toast');el.textContent=t;el.className=kind;el.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.opacity=0,1600)}
 function startExam(){
  resetWorld();
- G.mode=document.querySelector('input[name=mode]:checked').value;G.assist=$('assist').checked;
+ G.mode=document.querySelector('input[name=mode]:checked').value;G.assist=$('assist').checked;G.belt=$('seatbelt').checked;G.autoLook=$('autolook').checked;
+ SND.on=$('sound').checked;soundInit();if(SND.ac&&SND.ac.state==='suspended')SND.ac.resume();LOOK.yaw=LOOK.pitch=0;
  $('modeLbl').textContent=G.mode==='exam'?'시험':'연습';
- $('startOv').style.display='none';G.running=true;
+ $('startOv').style.display='none';G.running=true;$('help').classList.remove('hide');clearTimeout(window.__helpT);window.__helpT=setTimeout(()=>$('help').classList.add('hide'),15000);
  if(!$('seatbelt').checked)penalty('belt',5,'안전띠 미착용');
  cameraUpdate(0,true);
 }
@@ -616,16 +728,24 @@ let fineSticky=false;$('fineBtn').onclick=()=>{fineSticky=!fineSticky;$('fineBtn
 const KEYMAP={arrowup:'w',arrowdown:'s',arrowleft:'a',arrowright:'d'};
 addEventListener('keydown',e=>{let k=e.key.toLowerCase();k=KEYMAP[k]||k;
  if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())||k===' ')e.preventDefault();
- if(e.repeat&&(k==='c'||k==='p'||k==='escape'))return;
+ if(e.repeat&&(k==='c'||k==='p'||k==='m'||k==='escape'))return;
  if(k==='c'){G.view=(G.view+1)%3;cameraUpdate(0,true)}
  if(k==='p'||k==='escape')togglePause();
+ if(k==='h')$('help').classList.toggle('hide');
+ if(k==='m'){SND.on=!SND.on;toast(SND.on?'소리 켜짐':'소리 꺼짐')}
  if(k==='enter'&&$('startOv').style.display!=='none'){startExam();return}
  keys[k]=true});
 addEventListener('keyup',e=>{let k=e.key.toLowerCase();k=KEYMAP[k]||k;keys[k]=false});
 addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
+addEventListener('touchstart',()=>document.body.classList.add('touch'),{once:true,passive:true});
 document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;
  const on=e=>{keys[k]=true;b.classList.add('active');try{b.setPointerCapture(e.pointerId)}catch{}};const off=()=>{keys[k]=false;b.classList.remove('active')};
  b.addEventListener('pointerdown',on);['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,off));});
+renderer.domElement.addEventListener('pointerdown',e=>{LOOK.drag={x:e.clientX,y:e.clientY,id:e.pointerId};try{renderer.domElement.setPointerCapture(e.pointerId)}catch{}});
+renderer.domElement.addEventListener('pointermove',e=>{if(!LOOK.drag||LOOK.drag.id!==e.pointerId)return;const dx=e.clientX-LOOK.drag.x,dy=e.clientY-LOOK.drag.y;LOOK.drag.x=e.clientX;LOOK.drag.y=e.clientY;
+ LOOK.yaw=clamp(LOOK.yaw-dx*.005,-2.9,2.9);LOOK.pitch=clamp(LOOK.pitch-dy*.004,-.7,.6)});
+['pointerup','pointercancel'].forEach(ev=>renderer.domElement.addEventListener(ev,()=>LOOK.drag=null));
+renderer.domElement.addEventListener('dblclick',()=>{LOOK.yaw=LOOK.pitch=0});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
 
 resetWorld();renderSteps();cameraUpdate(0,true);
