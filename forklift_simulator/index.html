@@ -2,174 +2,637 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"/>
-<title>지게차 운전기능사 실기 시뮬레이터 - Prototype</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<title>지게차 실기 시뮬레이터</title>
 <style>
-:root{--panel:rgba(8,16,24,.88);--line:rgba(255,255,255,.16);--accent:#f6b73c;--muted:#aab7c4}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101820;color:#eef4f8;font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+:root{--panel:rgba(8,16,24,.86);--line:rgba(255,255,255,.16);--accent:#f6b73c;--muted:#aab7c4;--ok:#5fd38a;--warn:#f6b73c;--bad:#ff6b5b}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101820;color:#eef4f8;font-family:system-ui,-apple-system,"Noto Sans KR","Apple SD Gothic Neo",sans-serif;-webkit-user-select:none;user-select:none;touch-action:none}
 canvas{display:block}
 #hud{position:fixed;inset:0;pointer-events:none}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;backdrop-filter:blur(8px);box-shadow:0 8px 30px #0005}
-#brand{position:absolute;left:16px;top:14px;padding:11px 14px;font-weight:800;letter-spacing:.2px}
+#left{position:absolute;left:14px;top:14px;display:flex;flex-direction:column;gap:10px;width:250px}
+#brand{padding:10px 13px;font-weight:800}
 #brand small{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:2px}
-#stats{position:absolute;right:16px;top:14px;padding:12px 14px;min-width:190px;font-variant-numeric:tabular-nums}
-.stat{display:flex;justify-content:space-between;gap:20px;margin:4px 0;font-size:13px}.stat b{color:var(--accent)}
-#help{position:absolute;left:16px;bottom:16px;padding:12px 14px;max-width:380px;font-size:12px;line-height:1.7;color:#dce5ec}
-#controls{position:absolute;right:16px;bottom:16px;padding:12px;width:250px;pointer-events:auto}
-#controls h3{font-size:13px;margin:0 0 9px;color:var(--accent)}
-.row{display:flex;gap:6px;margin:6px 0}.btn{border:1px solid var(--line);background:#253442;color:#fff;border-radius:8px;padding:9px 10px;font-size:12px;flex:1;cursor:pointer;user-select:none}
-.btn:active,.btn.active{background:#9b6b19;border-color:#ffc85a}.btn.wide{flex:2}
-#centerMsg{position:absolute;left:50%;top:18%;transform:translateX(-50%);text-align:center;padding:9px 15px;font-size:13px;color:#fff}
-#dashboard{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(560px,70vw);height:100px;background:linear-gradient(180deg,#26313b,#0d1319);border:2px solid #65717b;border-bottom:0;border-radius:24px 24px 0 0;box-shadow:0 -8px 35px #0008;display:flex;align-items:center;justify-content:center;gap:28px;pointer-events:none}
-.gauge{width:68px;height:68px;border:5px solid #7c8a95;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(#1d2b35,#080d12);font-size:10px;color:#aebbc5}
-.gauge strong{font-size:18px;color:#f6b73c}.gear{font-size:24px;font-weight:800;color:#f6b73c}
-#steer{width:75px;height:75px;border:8px solid #161b20;border-radius:50%;position:relative}
-#steer:before{content:"";position:absolute;left:50%;top:0;height:100%;width:5px;background:#87939c;transform:translateX(-50%)}
+#steps{padding:10px 13px;font-size:12.5px;line-height:1.5}
+#steps h4{margin:0 0 6px;font-size:12px;color:var(--accent);letter-spacing:.3px}
+#steps ol{margin:0;padding:0;list-style:none}
+#steps li{display:flex;gap:7px;padding:2px 0;color:#9fb0bd}
+#steps li .m{width:16px;text-align:center;flex:none}
+#steps li.done{color:#cfe9d8}#steps li.done .m{color:var(--ok)}
+#steps li.cur{color:#fff;font-weight:700}#steps li.cur .m{color:var(--accent)}
+#minimap{width:250px;height:190px;padding:0;overflow:hidden}
+#stats{position:absolute;right:14px;top:14px;padding:11px 14px;min-width:200px;font-variant-numeric:tabular-nums}
+.stat{display:flex;justify-content:space-between;gap:18px;margin:3px 0;font-size:13px}.stat b{color:var(--accent)}
+#time.low{color:var(--bad)}
+#centerMsg{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;padding:9px 16px;font-size:14px;font-weight:600;color:#fff;max-width:min(560px,calc(100vw - 560px))}
+#guide{position:absolute;left:50%;top:64px;transform:translateX(-50%);padding:8px 14px;font-size:12.5px;line-height:1.6;display:none;font-variant-numeric:tabular-nums;text-align:center}
+#guide .ok{color:var(--ok)}#guide .warn{color:var(--warn)}#guide .bad{color:var(--bad)}
+#toast{position:fixed;top:118px;left:50%;transform:translateX(-50%);border-radius:8px;padding:8px 14px;opacity:0;transition:opacity .2s;z-index:20;pointer-events:none;font-weight:700;font-size:14px;background:#2a3a48}
+#toast.bad{background:#a32a22}#toast.warn{background:#8d6111}#toast.ok{background:#22784a}
+#help{position:absolute;left:14px;bottom:14px;padding:10px 13px;max-width:330px;font-size:11.5px;line-height:1.7;color:#dce5ec}
+#help kbd{background:#24323e;border:1px solid #3b4a57;border-radius:4px;padding:0 4px;font-family:inherit;font-size:11px}
+#controls{position:absolute;right:14px;bottom:14px;padding:10px;width:240px;pointer-events:auto}
+.row{display:flex;gap:6px;margin:5px 0}
+.btn{border:1px solid var(--line);background:#253442;color:#fff;border-radius:8px;padding:9px 4px;font-size:12px;flex:1;cursor:pointer;user-select:none;touch-action:none;font-family:inherit}
+.btn:active,.btn.active{background:#9b6b19;border-color:#ffc85a}
+#dashboard{position:absolute;left:50%;bottom:0;transform:translateX(-50%);width:min(600px,62vw);height:98px;background:linear-gradient(180deg,#26313b,#0d1319);border:2px solid #65717b;border-bottom:0;border-radius:24px 24px 0 0;box-shadow:0 -8px 35px #0008;display:flex;align-items:center;justify-content:center;gap:22px}
+.gauge{width:66px;height:66px;border:5px solid #7c8a95;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-direction:column;background:radial-gradient(#1d2b35,#080d12);font-size:10px;color:#aebbc5;font-variant-numeric:tabular-nums}
+.gauge strong{font-size:17px;color:#f6b73c}
+.gauge.ok{border-color:var(--ok)}.gauge.warn{border-color:var(--warn)}.gauge.bad{border-color:var(--bad)}
+.gear{font-size:26px;font-weight:800;color:#f6b73c;width:26px;text-align:center}
+#steer{width:70px;height:70px;border:8px solid #161b20;border-radius:50%;position:relative;background:#0c1217}
+#steer:before{content:"";position:absolute;left:50%;top:0;height:50%;width:5px;background:#87939c;transform:translateX(-50%)}
 #steer:after{content:"";position:absolute;left:0;top:50%;width:100%;height:5px;background:#87939c;transform:translateY(-50%)}
-#overlay{position:fixed;inset:0;background:#07111be8;display:flex;align-items:center;justify-content:center;z-index:5;padding:20px}
-#modal{max-width:560px;width:100%;padding:24px}.title{font-size:24px;font-weight:850;margin-bottom:8px}.sub{color:#b9c7d2;font-size:13px;line-height:1.65}
-#modal ul{padding-left:20px;color:#dbe5ed;font-size:13px;line-height:1.8}
-#start{background:var(--accent);color:#15191d;font-weight:800;border:0;border-radius:9px;padding:12px 18px;font-size:15px;cursor:pointer;margin-top:8px}
-#toast{position:fixed;z-index:10;pointer-events:none;top:72px;left:50%;transform:translateX(-50%);background:#9e2929;color:white;border-radius:8px;padding:8px 13px;opacity:0;transition:opacity .2s}
-@media(max-width:700px){#help{display:none}#controls{width:205px;right:8px;bottom:8px}#stats{right:8px;top:8px;min-width:155px}#brand{left:8px;top:8px}#dashboard{height:76px;width:70vw;gap:12px}.gauge{width:52px;height:52px}#steer{width:55px;height:55px}}
+#forkbar{width:14px;height:70px;border-radius:7px;background:#0a1016;border:1px solid #4b5864;position:relative;overflow:hidden}
+#forkbar .band{position:absolute;left:0;right:0;background:#2f7a4c}
+#forkbar .lim{position:absolute;left:0;right:0;height:2px;background:var(--bad)}
+#forkbar .cur{position:absolute;left:-2px;right:-2px;height:3px;background:#fff}
+.overlay{position:fixed;inset:0;background:#07111be8;display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+.modal{max-width:600px;width:100%;padding:22px 24px;max-height:calc(100vh - 32px);overflow:auto}
+.title{font-size:23px;font-weight:850;margin-bottom:6px}.sub{color:#b9c7d2;font-size:13px;line-height:1.65}
+.modal ul{padding-left:20px;color:#dbe5ed;font-size:13px;line-height:1.75;margin:10px 0}
+.opt{display:flex;align-items:center;gap:9px;margin:9px 0;color:#f4f7fa;font-size:13.5px;cursor:pointer}
+.opt input{width:18px;height:18px;accent-color:#f6b73c}
+.seg{display:flex;gap:6px;margin:12px 0 6px}.seg label{flex:1;border:1px solid var(--line);border-radius:9px;padding:9px 10px;cursor:pointer;font-size:13px;background:#1a2530}
+.seg label:has(input:checked){border-color:var(--accent);background:#3a2c10}
+.seg input{accent-color:#f6b73c;margin-right:6px}
+.seg small{display:block;color:var(--muted);font-size:11px;margin-top:3px}
+.primary{background:var(--accent);color:#15191d;font-weight:800;border:0;border-radius:9px;padding:12px 18px;font-size:15px;cursor:pointer;margin-top:10px;font-family:inherit}
+.note{color:#8fa1af;font-size:11.5px;line-height:1.6;margin-top:12px}
+#result .big{font-size:40px;font-weight:900;margin:4px 0}
+#result .pass{color:var(--ok)}#result .fail{color:var(--bad)}
+#resLog{font-size:13px;line-height:1.7;margin:10px 0;padding:0;list-style:none}
+#resLog li{border-bottom:1px solid #ffffff14;padding:3px 0;display:flex;gap:10px}
+#resLog .k{width:42px;flex:none;font-weight:700}#resLog .k.bad{color:var(--bad)}#resLog .k.warn{color:var(--warn)}
+#resLog .t{width:46px;flex:none;color:var(--muted);font-variant-numeric:tabular-nums}
+#pauseMsg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:8;background:#0008;font-size:22px;font-weight:800;pointer-events:none}
+@media(max-width:900px){#help{display:none}#centerMsg{max-width:calc(100vw - 40px);top:auto;bottom:108px;font-size:13px}#guide{top:auto;bottom:150px}}
+@media(max-width:700px){
+ #left{width:180px;left:8px;top:8px;gap:6px}#minimap{width:180px;height:136px}#steps{font-size:11px;padding:8px 10px}#brand{display:none}
+ #stats{right:8px;top:8px;min-width:150px;padding:8px 10px}.stat{font-size:11.5px}
+ #controls{width:200px;right:6px;bottom:6px;padding:7px}.btn{padding:8px 2px;font-size:11px}
+ #dashboard{left:6px;transform:none;width:calc(100vw - 222px);height:74px;gap:8px;border-radius:16px 16px 0 0}
+ .gauge{width:48px;height:48px;border-width:3px;font-size:8px}.gauge strong{font-size:13px}#steer{width:48px;height:48px;border-width:6px}.gear{font-size:18px}#forkbar{height:50px}
+ #centerMsg{bottom:84px}#guide{bottom:126px}
+}
 </style>
 </head>
 <body>
-<div id="overlay"><div id="modal" class="panel">
-<div class="title">지게차 운전기능사 실기 시뮬레이터</div>
-<div class="sub">조작 가능한 3D 프로토타입 · 일반 게임형 그래픽 · 운전석 계기판 UI</div>
-<ul>
-<li>W / S: 전진·후진 가속, Space: 브레이크</li>
-<li>A / D: 조향 (후륜 조향 특성), R / F: 포크 상승·하강</li>
-<li>T / G: 마스트 전방·후방 기울임, C: 1인칭·3인칭 전환, P: 일시정지</li>
-<li>목표: 팔레트를 포크에 맞춰 들어 올리고 표시된 구간으로 이동</li>
-</ul>
-<label style="display:flex;align-items:center;gap:9px;margin:14px 0;color:#f4f7fa;font-size:13px">
-<input id="seatbelt" type="checkbox" style="width:18px;height:18px;accent-color:#f6b73c">
-좌석 안전띠 착용 확인
-</label>
-<div class="sub">※ Q-Net 공개문제 기반으로 시험 흐름을 반영하는 교육용 프로토타입입니다. 세부 코스 치수와 세부 채점표는 공개문제 원문 대조 후 확정합니다.</div>
-<button id="start">안전 확인 후 시험 시작</button>
+<div id="startOv" class="overlay"><div class="modal panel">
+ <div class="title">지게차운전기능사 실기 시뮬레이터</div>
+ <div class="sub">작업형 코스 연습 · 제한시간 4분 · 100점 만점 60점 이상 &amp; 실격 없음 = 합격</div>
+ <ul>
+  <li><b>출발</b>: 포크를 지면에서 20~30cm 올리고 출발선 통과</li>
+  <li><b>A 적재</b>: 드럼 위 팔레트 구멍에 포크를 끝까지 넣고 들어 올림</li>
+  <li><b>전진 코스</b> 주행 → <b>B 드럼 위 하역</b> → <b>B 재적재</b></li>
+  <li><b>후진 코스</b> 주행 → <b>A 원위치 하역</b> → 출발선 안에 정지, 포크 지면</li>
+ </ul>
+ <div class="seg">
+  <label><input type="radio" name="mode" value="exam" checked>시험 모드<small>실격 즉시 종료</small></label>
+  <label><input type="radio" name="mode" value="practice">연습 모드<small>실격도 기록만 하고 계속</small></label>
+ </div>
+ <label class="opt"><input id="seatbelt" type="checkbox"> 좌석 안전띠 착용 (미착용 시 감점)</label>
+ <label class="opt"><input id="assist" type="checkbox" checked> 정렬 보조 가이드 표시 (포크 높이·좌우 편차)</label>
+ <button class="primary" id="startBtn">시험 시작</button>
+ <div class="note">조작: W/S 전진·후진 · A/D 조향(뒷바퀴) · Space 브레이크 · R/F 포크 상승·하강 · T/G 마스트 전경·후경 · Shift 미세 조작 · C 시점 · P 일시정지<br>
+ ※ 교육용 시뮬레이터입니다. 코스 형태·치수와 채점 기준은 공개된 수험 정보 요약을 바탕으로 근사한 것으로, Q-Net 공개문제 원문과 다를 수 있습니다.</div>
 </div></div>
+
+<div id="resultOv" class="overlay" style="display:none"><div class="modal panel" id="result">
+ <div class="sub" id="resMode">시험 결과</div>
+ <div class="big" id="resTitle">합격</div>
+ <div class="sub" id="resSummary"></div>
+ <ul id="resLog"></ul>
+ <button class="primary" id="againBtn">다시 하기</button>
+</div></div>
+
+<div id="pauseMsg">일시정지 · P로 재개</div>
+
 <div id="hud">
-<div id="brand" class="panel">FORKLIFT TRAINER <small>운전기능사 실기 · prototype v0.2</small></div>
-<div id="stats" class="panel">
-<div class="stat"><span>속도</span><b id="speed">0.0 km/h</b></div>
-<div class="stat"><span>변속</span><b id="gear">N</b></div>
-<div class="stat"><span>포크 높이</span><b id="fork">0.10 m</b></div>
-<div class="stat"><span>남은 시험시간</span><b id="time">04:00</b></div>
-<div class="stat"><span>장애물 접촉</span><b id="hits">0회</b></div>
-<div class="stat"><span>미션</span><b id="mission">팔레트 접근</b></div>
+ <div id="left">
+  <div id="brand" class="panel">FORKLIFT TRAINER <small>지게차운전기능사 실기 · v0.3</small></div>
+  <div id="steps" class="panel"><h4>작업 순서</h4><ol id="stepList"></ol></div>
+  <canvas id="minimap" class="panel" width="500" height="380"></canvas>
+ </div>
+ <div id="stats" class="panel">
+  <div class="stat"><span>남은 시간</span><b id="time">04:00</b></div>
+  <div class="stat"><span>점수</span><b id="score">100</b></div>
+  <div class="stat"><span>속도</span><b id="speed">0.0 km/h</b></div>
+  <div class="stat"><span>포크 높이</span><b id="fork">0 cm</b></div>
+  <div class="stat"><span>모드</span><b id="modeLbl">시험</b></div>
+ </div>
+ <div id="centerMsg" class="panel">준비</div>
+ <div id="guide" class="panel"></div>
+ <div id="help" class="panel"><b>조작</b> <kbd>W</kbd><kbd>S</kbd> 전진·후진 <kbd>A</kbd><kbd>D</kbd> 조향 <kbd>Space</kbd> 브레이크<br>
+ <kbd>R</kbd><kbd>F</kbd> 포크 상승·하강 <kbd>T</kbd><kbd>G</kbd> 마스트 전경·후경<br>
+ <kbd>Shift</kbd> 누른 채 조작 = 미세 조작 · <kbd>C</kbd> 시점(3인칭/운전석/위) · <kbd>P</kbd> 일시정지<br>
+ <span style="color:#f6b73c">팁</span> 뒷바퀴 조향이라 회전 시 차체 뒤쪽이 바깥으로 크게 돕니다.</div>
+ <div id="controls" class="panel">
+  <div class="row"><button class="btn" data-key="a">◀ 좌</button><button class="btn" data-key="w">▲ 전진</button><button class="btn" data-key="d">우 ▶</button></div>
+  <div class="row"><button class="btn" data-key=" ">브레이크</button><button class="btn" data-key="s">▼ 후진</button><button class="btn" id="fineBtn">미세</button></div>
+  <div class="row"><button class="btn" data-key="r">포크 ▲</button><button class="btn" data-key="f">포크 ▼</button><button class="btn" data-key="t">전경</button><button class="btn" data-key="g">후경</button></div>
+  <div class="row"><button class="btn" id="viewBtn">시점</button><button class="btn" id="pauseBtn">일시정지</button><button class="btn" id="resetBtn">처음부터</button></div>
+ </div>
+ <div id="dashboard">
+  <div class="gauge"><span>속도</span><strong id="dashSpeed">0</strong><span>km/h</span></div>
+  <div class="gauge" id="forkGauge"><span>포크</span><strong id="dashFork">0</strong><span>cm</span></div>
+  <div id="forkbar"><div class="band"></div><div class="lim"></div><div class="cur"></div></div>
+  <div id="steer"></div>
+  <div class="gear" id="dashGear">N</div>
+  <div class="gauge"><span>마스트</span><strong id="dashTilt">0°</strong><span id="tiltLbl">수평</span></div>
+ </div>
 </div>
-<div id="centerMsg" class="panel">W/S 주행 · A/D 조향 · R/F 포크</div>
-<div id="help" class="panel"><b>조작 방법</b><br>안전띠 확인 후 시험 시작 · 제한시간 4분 연습<br>W/S 전진·후진　A/D 조향<br>Space 브레이크　R/F 포크 상승·하강<br>T/G 마스트 기울임　C 시점 전환　P 일시정지<br><span style="color:#f6b73c">팁:</span> 지게차는 뒷바퀴가 조향축입니다. 저속에서 크게 꺾어 보세요.</div>
-<div id="controls" class="panel">
-<h3>운전 조작</h3>
-<div class="row"><button class="btn" data-key="a">◀ 좌회전</button><button class="btn" data-key="d">우회전 ▶</button></div>
-<div class="row"><button class="btn" data-key="w">▲ 전진</button><button class="btn" data-key="s">▼ 후진</button></div>
-<div class="row"><button class="btn" data-key="r">포크 올림</button><button class="btn" data-key="f">포크 내림</button></div>
-<div class="row"><button class="btn" id="brake">브레이크</button><button class="btn" id="view">시점 전환</button><button class="btn" id="reset">리셋</button></div>
-</div>
-<div id="dashboard">
-<div class="gauge"><span>속도</span><strong id="dashSpeed">0</strong><span>km/h</span></div>
-<div class="gauge"><span>포크</span><strong id="dashFork">0.1</strong><span>높이 m</span></div>
-<div id="steer"></div>
-<div class="gear" id="dashGear">N</div>
-<div class="gauge"><span>기울기</span><strong id="dashTilt">0°</strong><span>마스트</span></div>
-</div>
-</div>
-<div id="toast">장애물 접촉!</div>
+<div id="toast"></div>
+
 <script type="module">
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
-const scene=new THREE.Scene();scene.background=new THREE.Color(0x9dc3d8);scene.fog=new THREE.Fog(0x9dc3d8,35,100);
-const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,180);
-const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;document.body.appendChild(renderer.domElement);
-scene.add(new THREE.HemisphereLight(0xeaf5ff,0x6c765b,2));
-const sun=new THREE.DirectionalLight(0xffffff,2.1);sun.position.set(-12,22,12);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-35;sun.shadow.camera.right=35;sun.shadow.camera.top=35;sun.shadow.camera.bottom=-35;scene.add(sun);
-const mat=(c,rough=.8,metal=0)=>new THREE.MeshStandardMaterial({color:c,roughness:rough,metalness:metal});
-const yellow=mat(0xf4b52e),dark=mat(0x202a31),rubber=mat(0x111518),glass=new THREE.MeshStandardMaterial({color:0x78b9d2,transparent:true,opacity:.24,roughness:.2}),steel=mat(0x87949c,.45,.7),white=mat(0xf0eee6),red=mat(0xd84b36);
-function box(parent,x,y,z,sx,sy,sz,m){const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
-function cyl(parent,x,y,z,r1,r2,h,m,rotZ=0){const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,20),m);o.position.set(x,y,z);o.rotation.z=rotZ;o.castShadow=true;parent.add(o);return o}
-const ground=box(scene,0,-.25,0,100,.5,100,mat(0x78866c));ground.receiveShadow=true;
-const asphalt=box(scene,0,.012,0,16,.03,42,mat(0x777d80));asphalt.receiveShadow=true;
-for(let z=-19;z<20;z+=2){box(scene,0,.035,z,.12,.015,.9,white)}
-// course boundary lines and pallet target
-for(const x of [-6.8,6.8])box(scene,x,.04,0,.12,.02,40,mat(0xe9e2c9));
-for(const z of [-17,17])box(scene,0,.045,z,13.6,.02,.12,mat(0xe9e2c9));
-const pallet=new THREE.Group();scene.add(pallet);pallet.position.set(0,.08,-9);
-const wood=mat(0xb17a42);box(pallet,0,.08,0,1.35,.16,.95,wood);for(const x of [-.43,0,.43])box(pallet,x,-.06,0,.16,.12,.9,mat(0x81562e));for(const z of [-.34,.34])box(pallet,0,.19,z,1.32,.08,.12,wood);
-const cargo=box(scene,0,.75,-9,1.15,1.05,.78,mat(0x9caaad));cargo.position.set(0,.75,-9); 
-// cones
-const obstacles=[];function cone(x,z){const g=new THREE.Group();scene.add(g);g.position.set(x,0,z);cyl(g,0,.12,0,.22,.22,.07,red);const c=new THREE.Mesh(new THREE.ConeGeometry(.16,.55,16),red);c.position.y=.42;c.castShadow=true;g.add(c);obstacles.push(g)}
-[-5.7,5.7].forEach(x=>[-12,-4,5,13].forEach(z=>cone(x,z)));
-const forklift=new THREE.Group();scene.add(forklift);forklift.position.set(0,0,13);
-const chassis=new THREE.Group();forklift.add(chassis);
-box(chassis,0,.72,0,1.65,.58,2.25,yellow);
-box(chassis,0,1.08,.58,1.5,.16,.7,dark);
-box(chassis,0,1.0,-.72,1.48,.35,.55,yellow);
-box(chassis,0,1.45,.1,1.5,.12,1.7,dark);
-for(const x of [-.68,.68]){box(chassis,x,2.1,.12,.1,1.45,.12,yellow);box(chassis,x,2.72,.12,.1,.1,.12,dark)}
-box(chassis,0,2.75,.12,1.48,.12,.12,yellow);
-box(chassis,0,1.95,.88,1.35,.92,.08,glass);
-box(chassis,0,1.35,.5,.9,.08,.5,dark);
-const seat=box(chassis,0,1.15,.45,.55,.16,.45,mat(0x242d37));box(chassis,0,1.48,.62,.55,.55,.13,mat(0x242d37));
-const wheelMeshes=[];
-function wheel(x,z,steerable=false){const pivot=new THREE.Group();pivot.position.set(x,.48,z);chassis.add(pivot);const w=new THREE.Mesh(new THREE.CylinderGeometry(.36,.36,.22,24),rubber);w.rotation.z=Math.PI/2;w.castShadow=true;pivot.add(w);cyl(pivot,0,0,0,.18,.18,.24,steel,Math.PI/2);wheelMeshes.push({pivot,steerable});return pivot}
-wheel(-.83,.72);wheel(.83,.72);const rearL=wheel(-.83,-.78,true),rearR=wheel(.83,-.78,true);
-// mast in front (-z), forks
-const mast=new THREE.Group();mast.position.set(0,.55,-1.12);chassis.add(mast);
-box(mast,-.62,1.15,0,.13,2.35,.16,steel);box(mast,.62,1.15,0,.13,2.35,.16,steel);box(mast,0,2.28,0,1.35,.13,.2,steel);
-const carriage=new THREE.Group();mast.add(carriage);box(carriage,0,0,.04,1.3,.15,.16,dark);
-const forks=[];for(const x of [-.43,.43]){const f=box(carriage,x,-.08,-.8,.16,.12,1.55,steel);forks.push(f)}
-// steering wheel and dashboard visible in cockpit
-const sw=new THREE.Group();sw.position.set(0,1.35,.2);chassis.add(sw);const ring=new THREE.Mesh(new THREE.TorusGeometry(.28,.035,10,32),dark);ring.rotation.x=Math.PI/2;sw.add(ring);box(sw,0,0,0,.05,.05,.48,steel);
-box(chassis,0,1.3,.9,.9,.22,.48,dark);
-for(const x of [-.32,.32]){const g=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.025,24),mat(0x111820));g.rotation.x=Math.PI/2;g.position.set(x,1.43,.64);chassis.add(g)}
-// scene props
-for(let i=0;i<10;i++){box(scene,-10,.6,-18+i*4,1.2,1.2,1.2,mat(0x8c9b9e));box(scene,10,.6,-18+i*4,1.2,1.2,1.2,mat(0x8c9b9e))}
-const keys={};let speed=0,steer=0,forkH=.1,tilt=0,elapsed=0,started=false,paused=false,firstPerson=false,collisions=0,finished=false,wasTouching=false;
-const maxSpeed=5.5;
-function reset(){forklift.position.set(0,0,13);forklift.rotation.y=0;speed=0;steer=0;forkH=.1;tilt=0;elapsed=0;collisions=0;carriage.position.y=forkH;mast.rotation.x=-tilt;paused=false;finished=false;wasTouching=false;document.getElementById('centerMsg').textContent='W/S 주행 · A/D 조향 · R/F 포크';missionText('팔레트 접근')}
-function missionText(t){document.getElementById('mission').textContent=t}
-function update(dt){
- if(!started||paused)return;
- elapsed+=dt;
- if(elapsed>=240){elapsed=240;speed=0;paused=true;finished=true;missionText('시험시간 종료');document.getElementById('centerMsg').textContent='시험시간 종료';}
- const throttle=(keys.w?1:0)-(keys.s?1:0);
- if(keys[' '])speed*=Math.pow(.03,dt);else speed+=throttle*4.0*dt;
- speed=Math.max(-maxSpeed*.65,Math.min(maxSpeed,speed));if(!throttle&&!keys[' '])speed*=Math.pow(.48,dt);
- const steerIn=(keys.d?1:0)-(keys.a?1:0);steer+= (steerIn-steer)*Math.min(1,dt*5);
- const steerAngle=steer*.62;rearL.rotation.y=steerAngle;rearR.rotation.y=steerAngle;sw.rotation.z=-steer*.7;
- // Rear-steer behavior: pivot around rear axle, front follows outward
- const yawRate=-(speed/2.8)*Math.tan(steerAngle)*.72;
- forklift.rotation.y+=yawRate*dt;
- forklift.position.x-=Math.sin(forklift.rotation.y)*speed*dt;
- forklift.position.z-=Math.cos(forklift.rotation.y)*speed*dt;
- forklift.position.x=Math.max(-7.4,Math.min(7.4,forklift.position.x));forklift.position.z=Math.max(-20,Math.min(20,forklift.position.z));
- if(keys.r)forkH=Math.min(2.1,forkH+dt*.75);if(keys.f)forkH=Math.max(.08,forkH-dt*.75);
- if(keys.t)tilt=Math.min(.22,tilt+dt*.3);if(keys.g)tilt=Math.max(-.18,tilt-dt*.3);
- carriage.position.y=forkH;mast.rotation.x=-tilt;
- // collision proximity with cones
- let touching=false;for(const o of obstacles){const dx=forklift.position.x-o.position.x,dz=forklift.position.z-o.position.z;if(Math.hypot(dx,dz)<.78){touching=true;if(Math.abs(speed)>.5)speed*=.75;}}
- if(touching&&!wasTouching){collisions++;showToast('장애물 접촉 · 주행을 조심하세요');}wasTouching=touching;
- if(forklift.position.z<-6.8&&forklift.position.z>-11.5&&Math.abs(forklift.position.x)<1.4&&forkH>.5)missionText('팔레트 운반 중');else if(forklift.position.z<-12)missionText('반환 구간 이동');else missionText('팔레트 접근');
-}
-let toastTimer;function showToast(t){const el=document.getElementById('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.opacity=0,1100)}
-function cameraUpdate(){
- if(firstPerson){const p=new THREE.Vector3(0,2.05,.25).applyMatrix4(forklift.matrixWorld);camera.position.copy(p);const dir=new THREE.Vector3(0,1.45,-12).applyMatrix4(forklift.matrixWorld);camera.lookAt(dir)}
- else{const offset=new THREE.Vector3(0,6.5,10).applyAxisAngle(new THREE.Vector3(0,1,0),forklift.rotation.y);camera.position.copy(forklift.position).add(offset);camera.lookAt(forklift.position.x-Math.sin(forklift.rotation.y)*1.5,1.1,forklift.position.z-Math.cos(forklift.rotation.y)*1.5)}
-}
-function hud(){const km=Math.abs(speed)*3.6;document.getElementById('speed').textContent=km.toFixed(1)+' km/h';document.getElementById('dashSpeed').textContent=km.toFixed(0);document.getElementById('gear').textContent=speed>.1?'F':speed<-.1?'R':'N';document.getElementById('dashGear').textContent=speed>.1?'F':speed<-.1?'R':'N';document.getElementById('fork').textContent=forkH.toFixed(2)+' m';document.getElementById('dashFork').textContent=forkH.toFixed(1);document.getElementById('dashTilt').textContent=(tilt*57.3).toFixed(0)+'°';const remain=Math.max(0,240-elapsed);document.getElementById('time').textContent=String(Math.floor(remain/60)).padStart(2,'0')+':'+String(Math.floor(remain%60)).padStart(2,'0');document.getElementById('hits').textContent=collisions+'회';document.getElementById('steer').style.transform=`rotate(${steer*35}deg)`}
-let last=performance.now();function animate(now){requestAnimationFrame(animate);const dt=Math.min(.04,(now-last)/1000);last=now;update(dt);cameraUpdate();hud();renderer.render(scene,camera)}requestAnimationFrame(animate);
-addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;if(e.repeat&&(k==='c'||k==='p'))return;if(k==='c'){firstPerson=!firstPerson}if(k==='p'&&started&&!finished){paused=!paused;document.getElementById('centerMsg').textContent=paused?'일시정지 (P로 재개)':'W/S 주행 · A/D 조향 · R/F 포크'}if(k==='t')keys.t=true;if(k==='g')keys.g=true;if(k===' '||k.startsWith('arrow'))e.preventDefault()});
-addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
-document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;b.addEventListener('pointerdown',e=>{keys[k]=true;b.classList.add('active');b.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,()=>{keys[k]=false;b.classList.remove('active')}))});
-document.getElementById('brake').addEventListener('pointerdown',()=>keys[' ']=true);['pointerup','pointercancel','pointerleave'].forEach(ev=>document.getElementById('brake').addEventListener(ev,()=>keys[' ']=false));
-document.getElementById('view').onclick=()=>firstPerson=!firstPerson;document.getElementById('reset').onclick=reset;
-document.getElementById('start').onclick=()=>{
- if(!document.getElementById('seatbelt').checked){showToast('좌석 안전띠 착용을 먼저 확인하세요');return;}
- started=true;document.getElementById('overlay').style.display='none';missionText('출발 준비 완료');
+
+/* ================= 규칙 (공개 정보 기반 근사치, 필요 시 여기서 조정) ================= */
+const RULES={
+ timeLimit:240,          // 4분
+ passScore:60,
+ travelMin:.20, travelMax:.30, travelTol:.05, // 주행 포크 높이 20~30cm (±5cm 허용)
+ travelHardMax:.50,      // 주행 중 50cm 초과 = 실격
+ bandGrace:1.5,          // 범위 이탈 허용 시간(초) 후 감점
+ insertShortMax:.20,     // 포크 20cm 이상 덜 삽입 = 실격
+ placeFail:.20, placeWarn:.10, // 하역 위치 편차
 };
+
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const approach=(v,t,d)=>v<t?Math.min(t,v+d):Math.max(t,v-d);
+const wrapA=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a};
+
+/* ================= 코스 정의 ================= */
+// 좌표: 위에서 볼 때 -z가 북쪽(앞). 지게차 rotation.y=0이면 -z를 향함.
+const LANE=1.5, LW=.1;                       // 코스 반폭, 라인 폭
+const YARD={x0:-3,x1:3,z0:4,z1:19,open0:8.5,open1:11.5}; // 출발·적재 구역, 서쪽에 코스 입구
+const START_Z=15.5;                           // 출발선/정지선
+const path=(()=>{
+ const pts=[];let x=YARD.x0,z=(YARD.open0+YARD.open1)/2,dx=-1,dz=0;const st=.02;
+ const push=()=>{const l=pts[pts.length-1];if(!l||Math.hypot(l.x-x,l.z-z)>1e-4)pts.push({x,z})};push();
+ const rot=a=>{const rx=-dz,rz=dx,c=Math.cos(a),s=Math.sin(a);const nx=dx*c+rx*s,nz=dz*c+rz*s;dx=nx;dz=nz};
+ const straight=L=>{const n=Math.round(L/st);for(let i=0;i<n;i++){x+=dx*st;z+=dz*st;if(i%10===9)push()}push()};
+ const arc=(R,deg,side)=>{const tot=deg*Math.PI/180,n=Math.round(R*tot/st),da=tot/n*side;for(let i=0;i<n;i++){rot(da/2);x+=dx*st;z+=dz*st;rot(da/2);if(i%10===9)push()}push()};
+ straight(2);arc(3.5,90,1);straight(3);arc(3.5,90,1);straight(1);arc(3.5,90,-1);straight(6);
+ pts.end={x,z,dx,dz};return pts;
+})();
+const segs=[];for(let i=1;i<path.length;i++){const a=path[i-1],b=path[i];const ex=b.x-a.x,ez=b.z-a.z;segs.push({a,b,ex,ez,l2:ex*ex+ez*ez})}
+function tubeDist(px,pz){
+ let best=1e9,bi=-1,bt=0;
+ for(let i=0;i<segs.length;i++){const s=segs[i];const t=((px-s.a.x)*s.ex+(pz-s.a.z)*s.ez)/s.l2;const tc=clamp(t,0,1);const d=Math.hypot(px-(s.a.x+s.ex*tc),pz-(s.a.z+s.ez*tc));if(d<best){best=d;bi=i;bt=t}}
+ if(bi===segs.length-1&&bt>1)return 1e9; // 하역선 너머는 코스 밖
+ return best;
+}
+const inYard=(x,z,m)=>x>=YARD.x0+m&&x<=YARD.x1-m&&z>=YARD.z0+m&&z<=YARD.z1-m;
+const inTube=(x,z,m)=>tubeDist(x,z)<=LANE-m;
+const inCourse=(x,z,m)=>inYard(x,z,m)||inTube(x,z,m);
+
+/* ================= 팔레트·드럼 치수 ================= */
+const PAL={w:1.1,d:1.1,h:.144,deckB:.022,pocketTop:.122,stringer:.12};  // 표준 팔레트 1100×1100
+const POCKET_IN=.06, POCKET_OUT=.43;  // 포크 구멍 좌우 범위 (중앙 받침목 ~ 바깥 받침목)
+const DRUM_R=.28, DRUM_H=.88, DRUM_DX=.29;
+const E=path.end;
+const STANDS=[
+ {name:'A',x:0,z:YARD.z0-.4-PAL.d/2,yaw:0,line:YARD.z0},
+ {name:'B',x:E.x,z:E.z-.4-PAL.d/2,yaw:0,line:E.z},
+];
+for(const s of STANDS)s.drums=[{x:s.x-DRUM_DX,z:s.z},{x:s.x+DRUM_DX,z:s.z}];
+const standByName=n=>STANDS.find(s=>s.name===n);
+
+/* ================= 지게차 치수 ================= */
+const FA_Z=-.55, RA_Z=.9, WB=RA_Z-FA_Z;  // 앞(구동)축, 뒤(조향)축
+const MAST_Z=-.92, ROOT_Z=-1.0, FORK_L=1.1, FORK_X=.245, FORK_W=.12, FORK_T=.045;
+const BODY={x:.58,z0:-.9,z1:1.32};
+const WHEELS=[{x:-.5,z:FA_Z,r:.33},{x:.5,z:FA_Z,r:.33},{x:-.42,z:RA_Z,r:.26,st:1},{x:.42,z:RA_Z,r:.26,st:1}];
+const MAX_STEER=.9;
+
+/* ================= Three.js 장면 ================= */
+const scene=new THREE.Scene();scene.background=new THREE.Color(0xa9c9dc);scene.fog=new THREE.Fog(0xa9c9dc,45,120);
+const camera=new THREE.PerspectiveCamera(62,innerWidth/innerHeight,.05,250);
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;
+document.body.prepend(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xeaf5ff,0x6c765b,1.8));
+const sun=new THREE.DirectionalLight(0xffffff,2.2);sun.position.set(-15,26,14);sun.target.position.set(-3,0,4);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-20,right:20,top:20,bottom:-20,near:1,far:80});sun.shadow.bias=-.0005;
+scene.add(sun,sun.target);
+const mat=(c,r=.8,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const M={yellow:mat(0xf2b12a,.55,.1),dark:mat(0x22292f,.7),rubber:mat(0x121518,.9),steel:mat(0x8d989f,.4,.75),fork:mat(0x3a3f44,.5,.6),
+ wood:mat(0xc08a52),wood2:mat(0x95663a),drum:mat(0x2c5d9e,.45,.35),drumTop:mat(0x3f72b5,.45,.35),seat:mat(0x1d232a),glass:new THREE.MeshStandardMaterial({color:0x88c2db,transparent:true,opacity:.18,roughness:.1}),
+ lineW:new THREE.MeshStandardMaterial({color:0xf3f1e7,roughness:.6,side:THREE.DoubleSide}),lineY:new THREE.MeshStandardMaterial({color:0xf2c230,roughness:.6,side:THREE.DoubleSide}),
+ asphalt:new THREE.MeshStandardMaterial({color:0x5d6367,roughness:.95,side:THREE.DoubleSide}),light:mat(0xfff4cc,.3)};
+function box(p,x,y,z,sx,sy,sz,m,cast=true){const o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=cast;o.receiveShadow=true;p.add(o);return o}
+function cyl(p,x,y,z,r,h,m,seg=20){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;p.add(o);return o}
+function ribbon(pts,w,m,y){
+ const pos=[],idx=[];
+ for(let i=0;i<pts.length;i++){const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];let dx=b.x-a.x,dz=b.z-a.z;const L=Math.hypot(dx,dz)||1;dx/=L;dz/=L;
+  const nx=-dz*w/2,nz=dx*w/2;pos.push(pts[i].x+nx,y,pts[i].z+nz,pts[i].x-nx,y,pts[i].z-nz);if(i){const k=(i-1)*2;idx.push(k,k+2,k+1,k+1,k+2,k+3)}}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+ const o=new THREE.Mesh(g,m);o.receiveShadow=true;scene.add(o);return o;
+}
+const offsetPts=(pts,off)=>pts.map((p,i)=>{const a=pts[Math.max(0,i-1)],b=pts[Math.min(pts.length-1,i+1)];let dx=b.x-a.x,dz=b.z-a.z;const L=Math.hypot(dx,dz)||1;return{x:p.x-dz/L*off,z:p.z+dx/L*off}});
+// 바닥
+const ground=box(scene,0,-.25,0,160,.5,160,mat(0x9a9d94,.95),false);
+const yardFill=new THREE.Mesh(new THREE.PlaneGeometry(YARD.x1-YARD.x0,YARD.z1-YARD.z0),M.asphalt);yardFill.rotation.x=-Math.PI/2;yardFill.position.set((YARD.x0+YARD.x1)/2,.004,(YARD.z0+YARD.z1)/2);yardFill.receiveShadow=true;scene.add(yardFill);
+ribbon(path,LANE*2,M.asphalt,.005);
+// 코스 라인
+const LY=.012;
+const seg2=(x0,z0,x1,z1,m=M.lineY)=>ribbon([{x:x0,z:z0},{x:x1,z:z1}],LW,m,LY);
+seg2(YARD.x0,YARD.z0,YARD.x1,YARD.z0,M.lineW);                   // A 적재선
+seg2(YARD.x1,YARD.z0,YARD.x1,YARD.z1);seg2(YARD.x0,YARD.z1,YARD.x1,YARD.z1);
+seg2(YARD.x0,YARD.z0,YARD.x0,YARD.open0);seg2(YARD.x0,YARD.open1,YARD.x0,YARD.z1);
+seg2(YARD.x0,START_Z,YARD.x1,START_Z,M.lineW);                    // 출발/정지선
+ribbon(offsetPts(path,LANE),LW,M.lineY,LY);ribbon(offsetPts(path,-LANE),LW,M.lineY,LY);
+seg2(E.x+E.dz*LANE,E.z-E.dx*LANE,E.x-E.dz*LANE,E.z+E.dx*LANE,M.lineW); // B 하역선
+// 라벨
+function label(text,x,z,size=1.6,color='#ffffff'){
+ const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');g.font='bold 72px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=color;g.fillText(text,128,66);
+ const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size/2),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+ m.rotation.x=-Math.PI/2;m.position.set(x,.02,z);scene.add(m);return m;
+}
+label('출발',0,17.2,2.4);label('A',2.2,5.0,1.4,'#f6d36b');label('B',E.x+1.05,E.z+.9,1.4,'#f6d36b');
+// 드럼 + 가이드
+function drumMesh(x,z){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);cyl(g,0,DRUM_H/2,0,DRUM_R,DRUM_H,M.drum,28);for(const y of [.29,.59])cyl(g,0,y,0,DRUM_R+.012,.025,M.drumTop,28);cyl(g,0,DRUM_H-.006,0,DRUM_R-.01,.012,M.drumTop,28);}
+for(const s of STANDS){for(const d of s.drums)drumMesh(d.x,d.z);
+ const hw=PAL.w/2+.05,hd=PAL.d/2+.05;const q=[[-hw,-hd],[hw,-hd],[hw,hd],[-hw,hd],[-hw,-hd]].map(([a,b])=>({x:s.x+a,z:s.z+b}));
+ for(let i=0;i<4;i++)ribbon([q[i],q[i+1]],.05,M.lineW,LY);}
+// 주변 소품
+for(let i=0;i<9;i++){const z=-12+i*4;box(scene,7.5,.55,z,1.1,1.1,1.1,mat(0x8c9b9e));}
+box(scene,-3,3,-17,30,6,1,mat(0xb7bcb6),true);for(let i=0;i<6;i++)box(scene,-15+i*5.5,4.5,-16.45,3,1.2,.05,mat(0x6e8796));
+for(const [x,z] of [[-12,12],[6,-6],[-12,-8],[6,14]]){cyl(scene,x,3,z,.08,6,M.steel,10);box(scene,x,6.05,z,.5,.12,.3,M.light)}
+for(let i=0;i<4;i++){const g=new THREE.Group();g.position.set(-13,0,-2+i*1.3);scene.add(g);for(let k=0;k<3;k++)buildPallet(g,k*.15)}
+
+/* ================= 팔레트 메시 ================= */
+function buildPallet(parent,y0=0){
+ const g=new THREE.Group();g.position.y=y0;parent.add(g);
+ for(const x of [-.49,0,.49])box(g,x,PAL.deckB+.05,0,PAL.stringer,.1,PAL.d,M.wood2);
+ for(let i=0;i<7;i++)box(g,0,PAL.pocketTop+.011,-.5+i*(1/6),PAL.w,.022,.1,M.wood);
+ for(const z of [-.5,0,.5])box(g,0,.011,z,PAL.w,.022,.12,M.wood);
+ return g;
+}
+const palletMesh=buildPallet(scene);
+
+/* ================= 지게차 메시 ================= */
+const forklift=new THREE.Group();scene.add(forklift);
+{
+ const c=forklift;
+ box(c,0,.62,.25,1.12,.5,1.9,M.yellow);                 // 차체
+ box(c,0,.82,1.12,1.14,.78,.42,M.yellow);               // 카운터웨이트
+ box(c,0,1.2,1.12,1.0,.06,.38,M.dark);
+ box(c,0,.9,-.55,1.0,.08,.6,M.dark);                    // 바닥판
+ box(c,0,1.12,.42,.58,.14,.5,M.seat);box(c,0,1.42,.72,.56,.55,.12,M.seat); // 좌석
+ for(const x of [-.5,.5]){for(const z of [-.62,.82]){box(c,x,1.55,z,.07,1.3,.07,M.dark)}}
+ box(c,0,2.22,.1,1.1,.07,1.58,M.dark);for(let i=0;i<5;i++)box(c,0,2.27,-.55+i*.3,1.05,.03,.05,M.dark); // 헤드가드
+ const col=box(c,0,1.18,-.32,.08,.5,.08,M.dark);col.rotation.x=.45;
+ const sw=new THREE.Group();sw.position.set(0,1.42,-.22);sw.rotation.x=-1.1;c.add(sw);
+ const ring=new THREE.Mesh(new THREE.TorusGeometry(.17,.022,8,28),M.rubber);sw.add(ring);box(sw,0,0,0,.32,.03,.03,M.dark);
+ const knob=cyl(sw,.13,0,-.04,.02,.07,M.steel,8);knob.rotation.x=Math.PI/2;forklift.userData.sw=sw;
+ box(c,-.28,1.05,-.6,.05,.3,.05,M.dark);box(c,-.2,1.05,-.6,.05,.3,.05,M.dark); // 레버
+ box(c,0,1.0,-.75,1.0,.22,.2,M.dark);
+}
+const wheelObjs=WHEELS.map(w=>{const pivot=new THREE.Group();pivot.position.set(w.x,w.r,w.z);forklift.add(pivot);
+ const spin=new THREE.Group();pivot.add(spin);const t=new THREE.Mesh(new THREE.CylinderGeometry(w.r,w.r,.2,24),M.rubber);t.rotation.z=Math.PI/2;t.castShadow=true;spin.add(t);
+ const h=new THREE.Mesh(new THREE.CylinderGeometry(w.r*.55,w.r*.55,.21,12),M.steel);h.rotation.z=Math.PI/2;spin.add(h);box(spin,0,w.r*.4,0,.215,.06,.06,M.dark,false);return{pivot,spin,...w}});
+const mast=new THREE.Group();mast.position.set(0,.3,MAST_Z);forklift.add(mast);
+for(const x of [-.4,.4])box(mast,x,1.0,.02,.09,2.0,.12,M.steel);box(mast,0,1.98,.02,.9,.08,.12,M.steel);box(mast,0,.1,.02,.9,.08,.12,M.steel);
+cyl(mast,0,.75,.1,.05,1.4,M.steel,12);
+const inner=new THREE.Group();mast.add(inner);for(const x of [-.31,.31])box(inner,x,1.05,-.02,.07,1.9,.08,M.steel);box(inner,0,1.96,-.02,.7,.07,.08,M.steel);
+const carriage=new THREE.Group();mast.add(carriage);
+box(carriage,0,.22,-.05,.92,.36,.06,M.dark);
+for(const x of [-.4,-.2,0,.2,.4])box(carriage,x,.75,-.05,.04,.7,.03,M.dark);box(carriage,0,1.1,-.05,.92,.05,.04,M.dark);
+for(const s of [-1,1]){box(carriage,s*FORK_X,FORK_T/2,(ROOT_Z-MAST_Z)-FORK_L/2,FORK_W,FORK_T,FORK_L,M.fork);box(carriage,s*FORK_X,.27,(ROOT_Z-MAST_Z)+.02,FORK_W,.54,.04,M.fork)}
+
+/* ================= 상태 ================= */
+const S={x:0,z:0,th:0,v:0,steer:0,fb:0,tilt:0,spin:0};
+const P={x:0,z:0,yaw:0,pb:DRUM_H,holder:'A',rel:null};
+const G={running:false,paused:false,mode:'exam',assist:true,t:0,score:100,log:[],dq:false,crossed:false,seq:0,finished:false,
+ cool:{},pcount:{},bandT:0,bandFlag:false,tiltT:0,finT:0,lineFlag:false,wasInPocket:false,view:0};
+const keys={};
+const fwd=th=>({x:-Math.sin(th),z:-Math.cos(th)});
+const lw=(lx,lz)=>{const c=Math.cos(S.th),s=Math.sin(S.th);return{x:S.x+lx*c+lz*s,z:S.z-lx*s+lz*c}};
+const toLocal=(x,z,ox,oz,th)=>{const dx=x-ox,dz=z-oz,c=Math.cos(th),s=Math.sin(th);return{x:c*dx-s*dz,z:s*dx+c*dz}};
+const toFL=(x,z)=>toLocal(x,z,S.x,S.z,S.th);
+const frontAxle=()=>lw(0,FA_Z);
+
+function resetWorld(){
+ Object.assign(S,{x:0,z:16.0-FA_Z,th:0,v:0,steer:0,fb:0,tilt:0});
+ const A=standByName('A');Object.assign(P,{x:A.x,z:A.z,yaw:0,pb:DRUM_H,holder:'A',rel:null});
+ scene.add(palletMesh);
+ Object.assign(G,{running:false,paused:false,t:0,score:100,log:[],dq:false,crossed:false,seq:0,finished:false,cool:{},pcount:{},bandT:0,bandFlag:false,tiltT:0,finT:0,lineFlag:false,wasInPocket:false});
+ for(const k in keys)keys[k]=false;
+ syncMeshes();$('pauseMsg').style.display='none';
+}
+
+/* ================= 판정 ================= */
+function addLog(kind,text,pts=0){G.log.push({t:G.t,kind,text,pts})}
+function disq(key,text){
+ if(!G.running)return;
+ if(G.cool[key]!==undefined&&G.t-G.cool[key]<3)return;G.cool[key]=G.t;
+ G.dq=true;addLog('실격',text);toast('실격 · '+text,'bad');
+ if(G.mode==='exam')endExam();
+}
+function penalty(key,pts,text,max=1){
+ G.pcount[key]=G.pcount[key]||0;if(G.pcount[key]>=max)return;G.pcount[key]++;
+ G.score-=pts;addLog('감점',text,pts);toast(`감점 -${pts} · ${text}`,'warn');
+}
+const SEQ=['pickA','dropB','pickB','dropA'];
+function onEvent(e){
+ if(e===SEQ[G.seq]){G.seq++;toast({pickA:'A 적재 완료',dropB:'B 하역 완료',pickB:'B 재적재 완료',dropA:'A 원위치 하역 완료'}[e],'ok');}
+ else if(e==='dropA'&&G.seq===1){G.seq=0;toast('A에 다시 내려놓았습니다','warn')}
+ else if(e==='dropB'&&G.seq===3){G.seq=2;toast('B에 다시 내려놓았습니다','warn')}
+}
+
+function palletPose(){ // 운반 중 팔레트 월드 위치
+ const c=lw(P.rel.lx,P.rel.lz);return{x:c.x,z:c.z,yaw:S.th+P.rel.yaw,pb:S.fb+FORK_T-PAL.pocketTop};
+}
+// 포크 vs 팔레트(운반 중이 아닐 때)
+function forkVsPallet(){
+ const pb=P.pb,fb=S.fb,ft=fb+FORK_T;
+ const vert=ft>pb+1e-4&&fb<pb+PAL.h-1e-4;
+ let hit=false,latBad=false,low=false,high=false;const inCnt=[0,0],depth=[0,0];
+ [-1,1].forEach((side,si)=>{
+  for(let k=0;k<=11;k++){const w=lw(side*FORK_X,ROOT_Z-k*.1);const q=toLocal(w.x,w.z,P.x,P.z,P.yaw);
+   if(Math.abs(q.z)<=PAL.d/2&&Math.abs(q.x)-FORK_W/2<PAL.w/2){inCnt[si]++;const ax=Math.abs(q.x);
+    if(!(ax-FORK_W/2>=POCKET_IN-.003&&ax+FORK_W/2<=POCKET_OUT+.003))latBad=true;}}
+  const rw=lw(side*FORK_X,ROOT_Z),tw=lw(side*FORK_X,ROOT_Z-FORK_L);const r=toLocal(rw.x,rw.z,P.x,P.z,P.yaw),t=toLocal(tw.x,tw.z,P.x,P.z,P.yaw);
+  const cl=v=>clamp(v,-PAL.d/2,PAL.d/2);depth[si]=Math.abs(cl(r.z)-cl(t.z));
+ });
+ const anyIn=inCnt[0]+inCnt[1]>0,bothIn=inCnt[0]>0&&inCnt[1]>0;
+ if(vert&&anyIn){
+  if(latBad)hit=true;
+  else if(fb<pb+PAL.deckB-.002){low=true;hit=true}
+  else if(ft>pb+PAL.pocketTop+.002)high=true;
+ }
+ // 캐리지(포크 뿌리) 면 충돌
+ for(let x=-.45;x<=.451;x+=.15){const w=lw(x,ROOT_Z);const q=toLocal(w.x,w.z,P.x,P.z,P.yaw);
+  if(Math.abs(q.x)<PAL.w/2&&Math.abs(q.z)<PAL.d/2&&fb+1.2>pb&&fb-.1<pb+PAL.h)hit=true;}
+ const inPocket=vert&&anyIn&&!hit&&!high;
+ let attach=false;
+ if(high&&!hit){ if(bothIn&&G.wasInPocket)attach=true; else hit=true; }
+ return{hit,attach,inPocket,bothIn,depth:Math.min(depth[0],depth[1]),low};
+}
+function resolve(prev){
+ // 드럼 충돌 (차체·포크)
+ for(const s of STANDS)for(const d of s.drums){
+  const l=toFL(d.x,d.z);const cx=clamp(l.x,-BODY.x,BODY.x),cz=clamp(l.z,BODY.z0,BODY.z1);
+  if(Math.hypot(l.x-cx,l.z-cz)<DRUM_R)return{block:true,dq:['drumBody','차체가 드럼에 접촉']};
+  if(S.fb<DRUM_H){for(const side of [-1,1])for(let k=0;k<=11;k++){const w=lw(side*FORK_X,ROOT_Z-k*.1);if(Math.hypot(w.x-d.x,w.z-d.z)<DRUM_R+FORK_W/2)return{block:true,dq:['drumFork','포크가 드럼에 접촉']};}}
+ }
+ if(P.holder==='fork'){
+  const pp=palletPose(),prevPb=prev.fb+FORK_T-PAL.pocketTop;
+  for(const s of STANDS){const d=Math.hypot(pp.x-s.x,pp.z-s.z);if(d<.9&&pp.pb<=DRUM_H&&prevPb>=DRUM_H-.03)return{place:s,d}}
+  if(pp.pb<DRUM_H){for(const s of STANDS)for(const d of s.drums){const l=toLocal(d.x,d.z,pp.x,pp.z,pp.yaw);const cx=clamp(l.x,-PAL.w/2,PAL.w/2),cz=clamp(l.z,-PAL.d/2,PAL.d/2);
+   if(Math.hypot(l.x-cx,l.z-cz)<DRUM_R)return{block:true,dq:['palDrum','팔레트가 드럼에 충돌']}}}
+  if(pp.pb<=.002)return{ground:true};
+  return{};
+ }
+ const r=forkVsPallet();
+ if(r.attach)return{attach:true,depth:r.depth};
+ if(r.hit)return{block:true,palletHit:true};
+ G.wasInPocket=r.inPocket;
+ return{};
+}
+function pick(depth){
+ const from=P.holder;const short=FORK_L-depth;
+ if(short>RULES.insertShortMax)disq('insert',`포크 삽입 부족 (${Math.round(short*100)}cm 덜 삽입)`);
+ const l=toFL(P.x,P.z);P.rel={lx:l.x,lz:l.z,yaw:wrapA(P.yaw-S.th)};P.holder='fork';
+ carriage.add(palletMesh);
+ if(from==='A'||from==='B')onEvent('pick'+from);
+}
+function place(s){
+ const pp=palletPose();Object.assign(P,{x:pp.x,z:pp.z,yaw:pp.yaw,pb:DRUM_H,holder:s.name,rel:null});scene.add(palletMesh);G.wasInPocket=true;
+ const d=Math.hypot(P.x-s.x,P.z-s.z),yawErr=Math.abs(wrapA(P.yaw-s.yaw))*180/Math.PI;
+ if(d>RULES.placeFail)disq('place',`하역 위치 이탈 ${Math.round(d*100)}cm (20cm 초과)`);
+ else if(d>RULES.placeWarn)penalty('placeOff'+s.name,5,`하역 위치 편차 ${Math.round(d*100)}cm`);
+ if(yawErr>10)penalty('placeYaw'+s.name,5,`팔레트 틀어짐 ${yawErr.toFixed(0)}°`);
+ onEvent('drop'+s.name);
+}
+function groundDrop(){const pp=palletPose();Object.assign(P,{x:pp.x,z:pp.z,yaw:pp.yaw,pb:0,holder:'ground',rel:null});scene.add(palletMesh);G.wasInPocket=true;disq('palGround','팔레트가 지면에 닿음');}
+
+function inZone(){ // 적재·하역 작업 구역 (포크 높이 주행 규칙 예외)
+ const f=frontAxle();
+ if(inYard(f.x,f.z,0)&&f.z<8)return'A';
+ if(f.z<-5.5&&f.x>-2.5)return'B';
+ return null;
+}
+
+/* ================= 업데이트 ================= */
+function step(dt){
+ const fine=!!keys.shift||fineSticky;
+ const th=(keys.w?1:0)-(keys.s?1:0);
+ let v=S.v;const vmax=fine?1.0:3.0,vrev=fine?.8:2.2;
+ if(keys[' '])v=approach(v,0,7*dt);
+ else if(th){if(v*th<-.02)v+=th*5*dt;else v+=th*(fine?.9:1.6)*dt}
+ else v=approach(v,0,1.4*dt);
+ v=clamp(v,-vrev,vmax);
+ const si=(keys.d?1:0)-(keys.a?1:0);
+ if(si)S.steer=clamp(S.steer+si*(fine?.8:1.7)*dt,-1,1);else S.steer=approach(S.steer,0,1.8*dt);
+ const lr=fine?.1:.32;let fb=S.fb;if(keys.r)fb+=lr*dt;if(keys.f)fb-=lr*dt;fb=clamp(fb,0,2.4);
+ if(keys.t)S.tilt=clamp(S.tilt-.15*dt,-.1,.17);if(keys.g)S.tilt=clamp(S.tilt+.15*dt,-.1,.17);
+
+ const prev={x:S.x,z:S.z,th:S.th,fb:S.fb};
+ const delta=S.steer*MAX_STEER;
+ let f=fwd(S.th);const Fx=S.x-FA_Z*f.x+f.x*v*dt,Fz=S.z-FA_Z*f.z+f.z*v*dt; // 앞축 기준(비조향축) 이동
+ S.th+=-(v/WB)*Math.tan(delta)*dt;f=fwd(S.th);S.x=Fx+FA_Z*f.x;S.z=Fz+FA_Z*f.z;S.fb=fb;
+ const vBefore=v;
+ const res=resolve(prev);
+ if(res.block){Object.assign(S,prev);S.v=0;if(res.dq)disq(...res.dq);else if(res.palletHit&&Math.abs(vBefore)>.35)penalty('palBump',5,'포크로 팔레트를 밀거나 충돌',3);}
+ else S.v=v;
+ if(!G.running)return;
+ if(res.attach)pick(res.depth);
+ if(res.place)place(res.place);
+ if(res.ground)groundDrop();
+ if(!G.running)return;
+ S.spin+=S.v*dt;
+
+ // 라인 접촉/이탈
+ const out=WHEELS.some(w=>{const p=lw(w.x,w.z);return!inCourse(p.x,p.z,LW/2+.09)});
+ if(out){if(!G.lineFlag){G.lineFlag=true;disq('line','바퀴가 코스 라인 접촉·이탈')}}else G.lineFlag=false;
+ if(!G.running)return;
+
+ // 출발선 통과
+ const fa=frontAxle();
+ if(!G.crossed&&fa.z<START_Z){G.crossed=true;
+  if(S.fb<RULES.travelMin-RULES.travelTol||S.fb>RULES.travelMax+RULES.travelTol)penalty('startFork',5,'출발 시 포크 높이 20~30cm 미준수');}
+
+ // 주행 중 포크 규칙
+ const moving=Math.abs(S.v)>.15,zone=inZone(),carrying=P.holder==='fork';
+ if(moving&&S.fb<.03)disq('forkGround','포크가 지면에 닿은 채 주행');
+ if(moving&&!zone){
+  if(S.fb>RULES.travelHardMax)disq('forkHigh','주행 중 포크 높이 50cm 초과');
+  const ok=S.fb>=RULES.travelMin-RULES.travelTol&&S.fb<=RULES.travelMax+RULES.travelTol;
+  if(!ok){G.bandT+=dt;if(G.bandT>RULES.bandGrace&&!G.bandFlag){G.bandFlag=true;penalty('band',5,'주행 포크 높이 20~30cm 미유지',3)}}else{G.bandT=0;G.bandFlag=false}
+  if(carrying&&S.tilt<.03){G.tiltT+=dt;if(G.tiltT>2)penalty('tilt',5,'운반 중 마스트 후경 미실시')}else G.tiltT=0;
+ }else{G.bandT=0}
+ if(!G.running)return;
+
+ // 종료 조건: A 원위치 하역 후 출발선 안쪽 정지, 포크 지면
+ if(G.seq===4&&P.holder!=='fork'){
+  const inBox=fa.z>=START_Z&&WHEELS.every(w=>{const p=lw(w.x,w.z);return inYard(p.x,p.z,.05)});
+  if(inBox&&Math.abs(S.v)<.05&&S.fb<.03){G.finT+=dt;if(G.finT>.8){G.finished=true;endExam()}}else G.finT=0;
+ }
+}
+function update(dt){
+ if(!G.running||G.paused)return;
+ G.t+=dt;
+ if(G.t>=RULES.timeLimit){G.t=RULES.timeLimit;G.dq=true;addLog('실격','시험시간 4분 초과');endExam();return}
+ const n=3;for(let i=0;i<n&&G.running;i++)step(dt/n);
+}
+
+/* ================= 표시 ================= */
+function syncMeshes(){
+ forklift.position.set(S.x,0,S.z);forklift.rotation.y=S.th;
+ for(const w of wheelObjs){if(w.st)w.pivot.rotation.y=S.steer*MAX_STEER;w.spin.rotation.x=-S.spin/w.r;}
+ forklift.userData.sw.rotation.z=-S.steer*2.4;
+ mast.rotation.x=S.tilt;carriage.position.y=S.fb-.3;inner.position.y=Math.max(0,S.fb-1.15);
+ if(P.holder==='fork'){palletMesh.position.set(P.rel.lx,FORK_T-PAL.pocketTop,P.rel.lz-MAST_Z);palletMesh.rotation.set(0,P.rel.yaw,0)}
+ else{palletMesh.position.set(P.x,P.pb,P.z);palletMesh.rotation.set(0,P.yaw,0)}
+}
+const camPos=new THREE.Vector3(0,8,26),camLook=new THREE.Vector3();
+function cameraUpdate(dt,snap){
+ const f=fwd(S.th);let pos,look;
+ if(G.view===1){const e=lw(0,.38);pos=new THREE.Vector3(e.x,1.92,e.z);const l=lw(0,-4);look=new THREE.Vector3(l.x,.75,l.z);camera.up.set(0,1,0);camera.position.copy(pos);camera.lookAt(look);camPos.copy(pos);camLook.copy(look);return}
+ if(G.view===2){pos=new THREE.Vector3(S.x,15,S.z+.01);look=new THREE.Vector3(S.x,0,S.z);camera.up.set(0,0,-1)}
+ else{pos=new THREE.Vector3(S.x-f.x*6.5,4.6,S.z-f.z*6.5);look=new THREE.Vector3(S.x+f.x*2,.9,S.z+f.z*2);camera.up.set(0,1,0)}
+ const k=snap?1:1-Math.exp(-dt*5);camPos.lerp(pos,k);camLook.lerp(look,k);camera.position.copy(camPos);camera.lookAt(camLook);
+}
+const STEP_TEXT=['출발 · 포크 20~30cm로 출발선 통과','A 드럼 위 팔레트 적재','전진 코스 주행 → B 드럼 하역','B에서 팔레트 재적재','후진 코스 주행 → A 원위치 하역','출발선 안 정지 · 포크 지면'];
+function curStep(){if(G.finished)return 6;if(!G.crossed)return 0;return 1+G.seq}
+function renderSteps(){const c=curStep();$('stepList').innerHTML=STEP_TEXT.map((t,i)=>`<li class="${i<c?'done':i===c?'cur':''}"><span class="m">${i<c?'✓':i===c?'▶':'·'}</span>${t}</li>`).join('')}
+let lastStep=-1;
+function instruction(){
+ if(!G.running)return'준비';
+ const fb=S.fb,zone=inZone(),carrying=P.holder==='fork';
+ const travelOK=fb>=RULES.travelMin-RULES.travelTol&&fb<=RULES.travelMax+RULES.travelTol;
+ if(P.holder==='ground')return'팔레트가 바닥에 떨어졌습니다 (실격 사유)';
+ if(!G.crossed)return fb<.15?'R로 포크를 지면에서 20~30cm 올리세요':'출발선을 지나 A 드럼 쪽으로 전진하세요';
+ switch(G.seq){
+  case 0:return carrying?'팔레트를 다시 내려놓으세요':(zone==='A'?'포크를 팔레트 구멍 높이에 맞추고 끝까지 넣은 뒤 R로 들어 올리세요':'A 드럼 앞까지 전진 · 드럼 근처에서 포크를 구멍 높이로');
+  case 1:if(zone==='A')return'팔레트를 든 채 후진으로 빠진 뒤 포크를 20~30cm로 내리세요';
+   if(zone==='B')return'드럼보다 높게 올려 정렬 → 하역선 앞 정지 → 천천히 내려 하역';
+   return travelOK?(S.tilt<.03?'G로 마스트를 뒤로 기울이고 코스를 따라 B로 전진':'왼쪽 입구로 코스에 진입해 B 하역 지점까지 전진'):'주행 중 포크 높이는 20~30cm를 유지하세요';
+  case 2:return'B 팔레트를 다시 들어 올리세요 (재적재)';
+  case 3:if(zone==='A')return'A 드럼 위에 정렬해 원위치에 내려놓으세요';
+   if(zone==='B')return'들어 올린 뒤 포크를 20~30cm로 내리고 후진 주행 시작';
+   return travelOK?'후진으로 코스를 빠져나와 A 드럼 쪽으로':'주행 중 포크 높이는 20~30cm를 유지하세요';
+  case 4:{const fa=frontAxle();if(zone==='A'&&fb>.4)return'포크를 빼고 20~30cm로 내린 뒤 후진';
+   return fa.z<START_Z?'후진해 출발선(정지선) 안쪽으로 들어가세요':'정지 후 F로 포크를 지면까지 내리세요';}
+ }
+ return'';
+}
+function guideHTML(){
+ if(!G.assist||!G.running)return'';
+ const cm=v=>Math.round(v*100);
+ if(P.holder==='fork'){
+  const pp=palletPose();let best=null,bd=1e9;for(const s of STANDS){const d=Math.hypot(pp.x-s.x,pp.z-s.z);if(d<bd){bd=d;best=s}}
+  if(bd>3)return'';
+  const l=toLocal(pp.x,pp.z,best.x,best.z,0);const latS=Math.abs(l.x)<=.1?'ok':Math.abs(l.x)<=.2?'warn':'bad';
+  const above=pp.pb-DRUM_H;
+  return`<b>${best.name} 드럼 정렬</b> · 좌우 <span class="${latS}">${l.x>0?'오른쪽':'왼쪽'} ${Math.abs(cm(l.x))}cm</span> · 앞뒤 <span class="${Math.abs(l.z)<=.1?'ok':'warn'}">${l.z>0?'모자람':'넘침'} ${Math.abs(cm(l.z))}cm</span><br>팔레트 밑면 ↔ 드럼 윗면 <span class="${above>.02?'ok':'warn'}">${cm(above)}cm</span> · 전체 편차 <span class="${bd<=.1?'ok':bd<=.2?'warn':'bad'}">${cm(bd)}cm</span>`;
+ }
+ const root=lw(0,ROOT_Z);const q=toLocal(root.x,root.z,P.x,P.z,P.yaw);
+ if(Math.abs(q.x)>1.2||Math.abs(q.z)>3.6)return'';
+ const pl=toFL(P.x,P.z);const lat=pl.x;const yawE=wrapA(P.yaw-S.th)*180/Math.PI;
+ const lo=P.pb+PAL.deckB,hi=P.pb+PAL.pocketTop-FORK_T;const mid=(lo+hi)/2;const hd=S.fb-mid;
+ const hS=S.fb>=lo&&S.fb<=hi?'ok':Math.abs(hd)<.06?'warn':'bad';
+ const r=forkVsPallet();const ins=r.depth;
+ return`<b>포크 정렬</b> · 좌우 <span class="${Math.abs(lat)<=.06?'ok':Math.abs(lat)<=.12?'warn':'bad'}">팔레트 ${lat>0?'오른쪽':'왼쪽'} ${Math.abs(cm(lat))}cm</span> · 각도 <span class="${Math.abs(yawE)<2?'ok':'warn'}">${yawE.toFixed(1)}°</span><br>높이 <span class="${hS}">${hS==='ok'?'구멍 안 ✓':(hd>0?'↓ ':'↑ ')+Math.abs(cm(hd))+'cm'}</span> (구멍 ${cm(lo)}~${cm(hi)}cm) · 삽입 <span class="${FORK_L-ins<=RULES.insertShortMax?'ok':'warn'}">${cm(ins)}/${cm(FORK_L)}cm</span>`;
+}
+function hud(){
+ const km=Math.abs(S.v)*3.6;$('speed').textContent=km.toFixed(1)+' km/h';$('dashSpeed').textContent=km.toFixed(0);
+ const gear=S.v>.05?'F':S.v<-.05?'R':'N';$('dashGear').textContent=gear;
+ const fcm=Math.round(S.fb*100);$('fork').textContent=fcm+' cm';$('dashFork').textContent=fcm;
+ const band=S.fb>=RULES.travelMin-RULES.travelTol&&S.fb<=RULES.travelMax+RULES.travelTol;
+ $('forkGauge').className='gauge '+(S.fb>RULES.travelHardMax?(inZone()?'warn':'bad'):band?'ok':'warn');
+ const maxV=1.2,to=v=>clamp(v/maxV,0,1)*100;
+ const bar=$('forkbar');bar.querySelector('.band').style.cssText=`bottom:${to(RULES.travelMin)}%;height:${to(RULES.travelMax)-to(RULES.travelMin)}%`;
+ bar.querySelector('.lim').style.bottom=to(RULES.travelHardMax)+'%';bar.querySelector('.cur').style.bottom=`calc(${to(S.fb)}% - 1px)`;
+ const deg=S.tilt*57.3;$('dashTilt').textContent=Math.abs(deg).toFixed(0)+'°';$('tiltLbl').textContent=deg>.5?'후경':deg<-.5?'전경':'수평';
+ const remain=Math.max(0,RULES.timeLimit-G.t);$('time').textContent=String(Math.floor(remain/60)).padStart(2,'0')+':'+String(Math.floor(remain%60)).padStart(2,'0');
+ $('time').classList.toggle('low',remain<30);
+ $('score').textContent=G.score+(G.dq?' (실격)':'');$('score').style.color=G.dq?'var(--bad)':'';
+ $('steer').style.transform=`rotate(${S.steer*120}deg)`;
+ $('centerMsg').textContent=instruction();
+ const gh=guideHTML();const gEl=$('guide');gEl.style.display=gh?'block':'none';if(gh&&gEl.innerHTML!==gh)gEl.innerHTML=gh;
+ const cs=curStep();if(cs!==lastStep){lastStep=cs;renderSteps()}
+}
+// 미니맵
+const mm=$('minimap'),mg=mm.getContext('2d');
+const MB={x0:-11.5,x1:5.5,z0:-12,z1:20};
+function drawMinimap(){
+ const W=mm.width,H=mm.height;
+ mg.clearRect(0,0,W,H);
+ const s=Math.min(W/(MB.z1-MB.z0),H/(MB.x1-MB.x0))*.95;
+ const P2=(x,z)=>[W/2+(z-(MB.z0+MB.z1)/2)*s, H/2-(x-(MB.x0+MB.x1)/2)*s]; // 가로로 넓게: 화면 오른쪽=남(+z), 위=동(+x)
+ mg.lineCap='round';mg.lineJoin='round';
+ mg.strokeStyle='#4f575d';mg.lineWidth=LANE*2*s;mg.beginPath();path.forEach((p,i)=>{const [a,b]=P2(p.x,p.z);i?mg.lineTo(a,b):mg.moveTo(a,b)});mg.stroke();
+ mg.lineCap='butt';
+ const [ya,yb]=P2(YARD.x1,YARD.z0),[yc,yd]=P2(YARD.x0,YARD.z1);mg.fillStyle='#4f575d';mg.fillRect(ya,yb,yc-ya,yd-yb);
+ mg.strokeStyle='#e9eee9';mg.lineWidth=2;{const [a,b]=P2(YARD.x0,START_Z),[c,d]=P2(YARD.x1,START_Z);mg.beginPath();mg.moveTo(a,b);mg.lineTo(c,d);mg.stroke()}
+ for(const st of STANDS){mg.fillStyle='#3f72b5';for(const d of st.drums){const [a,b]=P2(d.x,d.z);mg.beginPath();mg.arc(a,b,DRUM_R*s,0,7);mg.fill()}
+  mg.fillStyle='#f6d36b';mg.font=`bold ${Math.round(s*.9)}px system-ui`;const [a,b]=P2(st.x,st.z);mg.fillText(st.name,a-s*1.6,b+s*.3)}
+ // 팔레트
+ const pp=P.holder==='fork'?palletPose():P;const pc=P2(pp.x,pp.z);mg.save();mg.translate(...pc);mg.rotate(-pp.yaw);mg.fillStyle='#c08a52';mg.fillRect(-PAL.d/2*s,-PAL.w/2*s,PAL.d*s,PAL.w*s);mg.restore();
+ // 지게차
+ const c=P2(S.x,S.z);mg.save();mg.translate(...c);mg.rotate(-S.th);
+ mg.fillStyle='#f2b12a';mg.fillRect(BODY.z0*s,-BODY.x*s,(BODY.z1-BODY.z0)*s,BODY.x*2*s);
+ mg.fillStyle='#333';for(const sd of [-1,1])mg.fillRect((ROOT_Z-FORK_L)*s,(sd*FORK_X-FORK_W/2)*s,FORK_L*s,FORK_W*s);
+ mg.restore();
+}
+
+/* ================= 흐름 ================= */
+let toastTimer;function toast(t,kind=''){const el=$('toast');el.textContent=t;el.className=kind;el.style.opacity=1;clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.style.opacity=0,1600)}
+function startExam(){
+ resetWorld();
+ G.mode=document.querySelector('input[name=mode]:checked').value;G.assist=$('assist').checked;
+ $('modeLbl').textContent=G.mode==='exam'?'시험':'연습';
+ $('startOv').style.display='none';G.running=true;
+ if(!$('seatbelt').checked)penalty('belt',5,'안전띠 미착용');
+ cameraUpdate(0,true);
+}
+function endExam(){
+ if(!G.running&&$('resultOv').style.display!=='none')return;
+ G.running=false;S.v=0;
+ const pass=!G.dq&&G.finished&&G.score>=RULES.passScore;
+ $('resMode').textContent=(G.mode==='exam'?'시험 모드':'연습 모드')+' 결과';
+ $('resTitle').textContent=pass?'합격':'불합격';$('resTitle').className='big '+(pass?'pass':'fail');
+ const used=G.t,mmss=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+ const done=Math.min(curStep(),6);
+ $('resSummary').innerHTML=`점수 <b>${G.score}</b>점 · 소요 시간 <b>${mmss(used)}</b> / 4:00 · 작업 ${done}/6 단계 완료${G.dq?' · <span style="color:var(--bad)">실격 사유 있음</span>':''}${!G.finished&&!G.dq?' · 코스 미완료':''}`;
+ $('resLog').innerHTML=G.log.length?G.log.map(l=>`<li><span class="t">${mmss(l.t)}</span><span class="k ${l.kind==='실격'?'bad':'warn'}">${l.kind}</span><span>${l.text}${l.pts?` (-${l.pts})`:''}</span></li>`).join(''):'<li>감점·실격 없음</li>';
+ setTimeout(()=>{$('resultOv').style.display='flex'},G.finished?300:900);
+}
+$('startBtn').onclick=startExam;
+$('againBtn').onclick=()=>{$('resultOv').style.display='none';resetWorld();$('startOv').style.display='flex'};
+$('resetBtn').onclick=()=>{if(confirm('처음부터 다시 시작할까요?')){$('resultOv').style.display='none';resetWorld();$('startOv').style.display='flex'}};
+$('viewBtn').onclick=()=>{G.view=(G.view+1)%3;cameraUpdate(0,true)};
+function togglePause(){if(!G.running)return;G.paused=!G.paused;$('pauseMsg').style.display=G.paused?'flex':'none'}
+$('pauseBtn').onclick=togglePause;
+let fineSticky=false;$('fineBtn').onclick=()=>{fineSticky=!fineSticky;$('fineBtn').classList.toggle('active',fineSticky)};
+
+const KEYMAP={arrowup:'w',arrowdown:'s',arrowleft:'a',arrowright:'d'};
+addEventListener('keydown',e=>{let k=e.key.toLowerCase();k=KEYMAP[k]||k;
+ if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(e.key.toLowerCase())||k===' ')e.preventDefault();
+ if(e.repeat&&(k==='c'||k==='p'||k==='escape'))return;
+ if(k==='c'){G.view=(G.view+1)%3;cameraUpdate(0,true)}
+ if(k==='p'||k==='escape')togglePause();
+ if(k==='enter'&&$('startOv').style.display!=='none'){startExam();return}
+ keys[k]=true});
+addEventListener('keyup',e=>{let k=e.key.toLowerCase();k=KEYMAP[k]||k;keys[k]=false});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false});
+document.querySelectorAll('[data-key]').forEach(b=>{const k=b.dataset.key;
+ const on=e=>{keys[k]=true;b.classList.add('active');try{b.setPointerCapture(e.pointerId)}catch{}};const off=()=>{keys[k]=false;b.classList.remove('active')};
+ b.addEventListener('pointerdown',on);['pointerup','pointercancel','lostpointercapture'].forEach(ev=>b.addEventListener(ev,off));});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+
+resetWorld();renderSteps();cameraUpdate(0,true);
+let last=performance.now();
+function animate(now){requestAnimationFrame(animate);const dt=Math.min(.05,(now-last)/1000);last=now;update(dt);syncMeshes();cameraUpdate(dt);hud();drawMinimap();renderer.render(scene,camera)}
+requestAnimationFrame(animate);
+window.__sim={S,P,G,keys,STANDS,path,RULES,inCourse,frontAxle};
 </script>
-</body></html>
+</body>
+</html>
