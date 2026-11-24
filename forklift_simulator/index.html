@@ -95,7 +95,7 @@ body.touch #dashboard{left:14px;transform:none;width:min(560px,calc(100vw - 290p
   <li><b>출발 전</b>: B 안전벨트 착용 · N 주차 브레이크 해제 · R 포크 20~30cm</li>
   <li><b>출발</b>: 출발선 통과부터 4분 계시</li>
   <li><b>A 적재</b>: 드럼 위 팔레트 구멍에 포크를 끝까지 넣고 들어 올림</li>
-  <li><b>전진 코스</b> 주행 → <b>B 드럼 위 하역</b> → <b>B 재적재</b></li>
+  <li><b>전진 코스</b> 주행 → <b>B 드럼 위 하역</b> → <b>후진선</b>까지 후진해 포크를 지면에 내림 → 다시 전진해 <b>B 재적재</b></li>
   <li><b>후진 코스</b> 주행 → <b>A 원위치 하역</b> → 출발선 안에 정지, 포크 지면</li>
  </ul>
  <div class="seg">
@@ -269,13 +269,15 @@ seg2(YARD.x0,YARD.z0,YARD.x0,YARD.open0);seg2(YARD.x0,YARD.open1,YARD.x0,YARD.z1
 seg2(YARD.x0,START_Z,YARD.x1,START_Z,M.lineW);                    // 출발/정지선
 ribbon(offsetPts(path,LANE),LW,M.lineY,LY);ribbon(offsetPts(path,-LANE),LW,M.lineY,LY);
 seg2(E.x+E.dz*LANE,E.z-E.dx*LANE,E.x-E.dz*LANE,E.z+E.dx*LANE,M.lineW); // B 하역선
+const BACK_D=3.5, BACK={x:E.x-E.dx*BACK_D,z:E.z-E.dz*BACK_D}; // 후진선: B 하역선에서 3.5m 뒤
+seg2(BACK.x+E.dz*LANE,BACK.z-E.dx*LANE,BACK.x-E.dz*LANE,BACK.z+E.dx*LANE,M.lineW);
 // 라벨
 function label(text,x,z,size=1.6,color='#ffffff'){
  const c=document.createElement('canvas');c.width=256;c.height=128;const g=c.getContext('2d');g.font='bold 72px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillStyle=color;g.fillText(text,128,66);
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;const m=new THREE.Mesh(new THREE.PlaneGeometry(size,size/2),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
  m.rotation.x=-Math.PI/2;m.position.set(x,.02,z);scene.add(m);return m;
 }
-label('출발',0,17.9,2.4);label('A',2.2,5.0,1.4,'#f6d36b');label('B',E.x+1.05,E.z+.9,1.4,'#f6d36b');
+label('출발',0,17.9,2.4);label('A',2.2,5.0,1.4,'#f6d36b');label('B',E.x+1.05,E.z+.9,1.4,'#f6d36b');label('후진선',BACK.x,BACK.z+.7,1.7,'#ffffff');
 // 드럼 + 가이드
 function drumMesh(x,z){const g=new THREE.Group();g.position.set(x,0,z);scene.add(g);cyl(g,0,DRUM_H/2,0,DRUM_R,DRUM_H,M.drum,28);for(const y of [.29,.59])cyl(g,0,y,0,DRUM_R+.012,.025,M.drumTop,28);cyl(g,0,DRUM_H-.006,0,DRUM_R-.01,.012,M.drumTop,28);}
 for(const s of STANDS){for(const d of s.drums)drumMesh(d.x,d.z);
@@ -395,11 +397,13 @@ function penalty(key,pts,text,max=1){
  G.pcount[key]=G.pcount[key]||0;if(G.pcount[key]>=max)return;G.pcount[key]++;
  G.score-=pts;addLog('감점',text,pts);toast(`감점 -${pts} · ${text}`,'warn');
 }
-const SEQ=['pickA','dropB','pickB','dropA'];
+// 순서: A 적재 → B 하역 → 후진선에서 포크 지면 → B 재적재 → A 원위치 하역 → 정지
+const SEQ=['pickA','dropB','touchB','pickB','dropA'];
 function onEvent(e){
- if(e===SEQ[G.seq]){G.seq++;toast({pickA:'A 적재 완료',dropB:'B 하역 완료',pickB:'B 재적재 완료',dropA:'A 원위치 하역 완료'}[e],'ok');}
+ if(e===SEQ[G.seq]){G.seq++;toast({pickA:'A 적재 완료',dropB:'B 하역 완료 · 후진선까지 후진',touchB:'후진선 포크 지면 확인 · 다시 전진해 적재',pickB:'B 재적재 완료',dropA:'A 원위치 하역 완료'}[e],'ok');}
+ else if(e==='pickB'&&G.seq===2){penalty('touch',5,'후진선에서 포크를 지면에 내리지 않고 재적재');G.seq=4;}
  else if(e==='dropA'&&G.seq===1){G.seq=0;toast('A에 다시 내려놓았습니다','warn')}
- else if(e==='dropB'&&G.seq===3){G.seq=2;toast('B에 다시 내려놓았습니다','warn')}
+ else if(e==='dropB'&&G.seq===4){G.seq=3;toast('B에 다시 내려놓았습니다','warn')}
 }
 
 function palletPose(){ // 운반 중 팔레트 월드 위치
@@ -470,6 +474,7 @@ function place(s){
 }
 function groundDrop(){const pp=palletPose();Object.assign(P,{x:pp.x,z:pp.z,yaw:pp.yaw,pb:0,holder:'ground',rel:null});scene.add(palletMesh);G.wasInPocket=true;disq('palGround','팔레트가 지면에 닿음');}
 
+function atBackLine(){const f=frontAxle();return((f.x-BACK.x)*E.dx+(f.z-BACK.z)*E.dz)<=.25&&inTube(f.x,f.z,0)} // 앞바퀴가 후진선 위 또는 뒤
 function inZone(){ // 적재·하역 작업 구역 (포크 높이 주행 규칙 예외)
  const f=frontAxle();
  if(inYard(f.x,f.z,0)&&f.z<8)return'A';
@@ -534,7 +539,9 @@ function step(dt){
  if(!G.running)return;
 
  // 종료 조건: A 원위치 하역 후 출발선 안쪽 정지, 포크 지면
- if(G.seq===4&&P.holder!=='fork'){
+ // 후진선에서 정지 후 포크를 지면까지 (이때는 포크 지면 접촉 허용)
+ if(G.seq===2&&P.holder==='B'&&!P.pending&&atBackLine()&&Math.abs(S.v)<.05&&S.fb<.02)onEvent('touchB');
+ if(G.seq===5&&P.holder!=='fork'){
   const inBox=fa.z>=START_Z&&WHEELS.every(w=>{const p=lw(w.x,w.z);return inYard(p.x,p.z,.05)});
   if(inBox&&Math.abs(S.v)<.05&&S.fb<.03){G.finT+=dt;if(G.finT>.8){G.finished=true;endExam()}}else G.finT=0;
  }
@@ -641,8 +648,8 @@ function cameraUpdate(dt,snap){
   camera.up.set(0,1,0)}
  const k=snap?1:1-Math.exp(-dt*8);camPos.lerp(pos,k);camLook.lerp(look,k);camera.position.copy(camPos);camera.lookAt(camLook);
 }
-const STEP_TEXT=['출발 · 포크 20~30cm로 출발선 통과','A 드럼 위 팔레트 적재','전진 코스 주행 → B 드럼 하역','B에서 팔레트 재적재','후진 코스 주행 → A 원위치 하역','출발선 안 정지 · 포크 지면'];
-function curStep(){if(G.finished)return 6;if(!G.crossed)return 0;return 1+G.seq}
+const STEP_TEXT=['출발 · 포크 20~30cm로 출발선 통과','화물적재선 A 드럼 팔레트 적재','전진 코스 주행 → B 드럼 하역','후진선까지 후진 · 포크 지면에 내림','다시 전진해 B 팔레트 재적재','후진 코스 주행 → A 드럼 원위치 하역','후진해 출발 위치 정지 · 포크 지면'];
+function curStep(){if(G.finished)return 7;if(!G.crossed)return 0;return 1+G.seq}
 function renderSteps(){const c=curStep();$('stepList').innerHTML=STEP_TEXT.map((t,i)=>`<li class="${i<c?'done':i===c?'cur':''}"><span class="m">${i<c?'✓':i===c?'▶':'·'}</span>${t}</li>`).join('')}
 let lastStep=-1;
 function instruction(){
@@ -658,11 +665,13 @@ function instruction(){
    if(zone==='A')return'팔레트를 든 채 후진으로 빠진 뒤 포크를 20~30cm로 내리세요';
    if(zone==='B')return'드럼보다 높게 올려 정렬 → 하역선 앞 정지 → 천천히 내려 하역';
    return travelOK?(S.tilt<.03?'G로 마스트를 뒤로 기울이고 코스를 따라 B로 전진':'왼쪽 입구로 코스에 진입해 B 하역 지점까지 전진'):'주행 중 포크 높이는 20~30cm를 유지하세요';
-  case 2:return P.holder==='B'&&P.pending?'포크를 조금 더 내려 팔레트에서 떼세요 (하역 확인)':'B 팔레트를 다시 들어 올리세요 (재적재)';
-  case 3:if(zone==='A')return'A 드럼 위에 정렬해 원위치에 내려놓으세요';
+  case 2:if(P.holder==='B'&&P.pending)return'포크를 조금 더 내려 팔레트에서 떼세요 (하역 확인)';
+   return atBackLine()?(Math.abs(S.v)>.05?'정지하세요':'F로 포크를 지면까지 완전히 내리세요'):'포크를 뺀 채 후진선까지 후진하세요';
+  case 3:return S.fb<.05?'R로 포크를 올린 뒤 다시 전진해 B 팔레트를 적재하세요':'B 팔레트 구멍 높이로 맞추고 전진해 재적재';
+  case 4:if(zone==='A')return'A 드럼 위에 정렬해 원위치에 내려놓으세요';
    if(zone==='B')return'들어 올린 뒤 포크를 20~30cm로 내리고 후진 주행 시작';
    return travelOK?'후진으로 코스를 빠져나와 A 드럼 쪽으로':'주행 중 포크 높이는 20~30cm를 유지하세요';
-  case 4:{const fa=frontAxle();if(zone==='A'&&fb>.4)return'포크를 빼고 20~30cm로 내린 뒤 후진';
+  case 5:{const fa=frontAxle();if(zone==='A'&&fb>.4)return'포크를 빼고 20~30cm로 내린 뒤 후진';
    return fa.z<START_Z?'후진해 출발선(정지선) 안쪽으로 들어가세요':'정지 후 F로 포크를 지면까지 내리세요';}
  }
  return'';
@@ -717,6 +726,7 @@ function drawMinimap(){
  mg.lineCap='butt';
  const [ya,yb]=P2(YARD.x1,YARD.z0),[yc,yd]=P2(YARD.x0,YARD.z1);mg.fillStyle='#4f575d';mg.fillRect(ya,yb,yc-ya,yd-yb);
  mg.strokeStyle='#e9eee9';mg.lineWidth=2;{const [a,b]=P2(YARD.x0,START_Z),[c,d]=P2(YARD.x1,START_Z);mg.beginPath();mg.moveTo(a,b);mg.lineTo(c,d);mg.stroke()}
+ {const [a,b]=P2(BACK.x-LANE,BACK.z),[c,d]=P2(BACK.x+LANE,BACK.z);mg.strokeStyle='#e9eee9';mg.lineWidth=2;mg.beginPath();mg.moveTo(a,b);mg.lineTo(c,d);mg.stroke()}
  for(const st of STANDS){mg.fillStyle='#3f72b5';for(const d of st.drums){const [a,b]=P2(d.x,d.z);mg.beginPath();mg.arc(a,b,DRUM_R*s,0,7);mg.fill()}
   mg.fillStyle='#f6d36b';mg.font=`bold ${Math.round(s*.9)}px system-ui`;const [a,b]=P2(st.x,st.z);mg.fillText(st.name,a-s*1.6,b+s*.3)}
  // 팔레트
@@ -746,8 +756,8 @@ function endExam(){
  $('resMode').textContent=(G.mode==='exam'?'시험 모드':'연습 모드')+' 결과';
  $('resTitle').textContent=pass?'합격':'불합격';$('resTitle').className='big '+(pass?'pass':'fail');
  const used=G.t,mmss=t=>`${Math.floor(t/60)}:${String(Math.floor(t%60)).padStart(2,'0')}`;
- const done=Math.min(curStep(),6);
- $('resSummary').innerHTML=`점수 <b>${G.score}</b>점 · 소요 시간 <b>${mmss(used)}</b> / 4:00 · 작업 ${done}/6 단계 완료${G.dq?' · <span style="color:var(--bad)">실격 사유 있음</span>':''}${!G.finished&&!G.dq?' · 코스 미완료':''}`;
+ const done=Math.min(curStep(),7);
+ $('resSummary').innerHTML=`점수 <b>${G.score}</b>점 · 소요 시간 <b>${mmss(used)}</b> / 4:00 · 작업 ${done}/7 단계 완료${G.dq?' · <span style="color:var(--bad)">실격 사유 있음</span>':''}${!G.finished&&!G.dq?' · 코스 미완료':''}`;
  $('resLog').innerHTML=G.log.length?G.log.map(l=>`<li><span class="t">${mmss(l.t)}</span><span class="k ${l.kind==='실격'?'bad':'warn'}">${l.kind}</span><span>${l.text}${l.pts?` (-${l.pts})`:''}</span></li>`).join(''):'<li>감점·실격 없음</li>';
  setTimeout(()=>{$('resultOv').style.display='flex'},G.finished?300:900);
 }
