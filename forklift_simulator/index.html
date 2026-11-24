@@ -161,6 +161,14 @@ body.touch #dashboard{left:14px;transform:none;width:min(560px,calc(100vw - 290p
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 
 /* ================= 규칙 (공개 정보 기반 근사치, 필요 시 여기서 조정) ================= */
+const DRIVE={ // 주행 감각 (조정용)
+ vmax:2.4, vrev:1.7,     // 최고속도 m/s (약 8.6km/h / 6.1km/h)
+ accel:1.8,              // 가속
+ coast:3.2,              // 페달을 뗐을 때 감속 (엔진 브레이크)
+ brake:6.5,              // 브레이크
+ reverseBrake:5.0,       // 진행 반대 방향 키를 눌렀을 때 감속
+ fineV:.8, fineAccel:.9, // Shift 미세 조작
+};
 const RULES={
  timeLimit:240,          // 4분
  passScore:60,
@@ -474,10 +482,11 @@ function step(dt){
  const fine=!!keys.shift||fineSticky;
  let th=(keys.w?1:0)-(keys.s?1:0);
  if(G.park||(!G.crossed&&S.fb<.05))th=0; // 주차 브레이크 체결 또는 포크를 올리기 전에는 출발 불가
- let v=S.v;const vmax=fine?1.0:3.0,vrev=fine?.8:2.2;
- if(keys[' ']||G.park)v=approach(v,0,7*dt);
- else if(th){if(v*th<-.02)v+=th*5*dt;else v+=th*(fine?.9:1.6)*dt}
- else v=approach(v,0,1.4*dt);
+ let v=S.v;const D=DRIVE,vmax=fine?D.fineV:D.vmax,vrev=fine?D.fineV*.8:D.vrev;
+ if(keys[' ']||G.park)v=approach(v,0,D.brake*dt);
+ else if(th){if(v*th<-.02)v+=th*D.reverseBrake*dt;                       // 반대 방향 키 = 감속
+  else{const lim=th>0?vmax:vrev;v+=th*(fine?D.fineAccel:D.accel)*Math.max(.15,1-Math.abs(v)/lim)*dt}} // 최고속도에 가까울수록 가속 완만
+ else v=approach(v,0,D.coast*dt);                                          // 페달을 떼면 엔진 브레이크로 감속
  v=clamp(v,-vrev,vmax);
  const si=(keys.d?1:0)-(keys.a?1:0);
  if(si){S.steer=clamp(S.steer+si*(fine?.45:1.0)*dt,-1,1);G.centerReq=false}
@@ -630,7 +639,7 @@ function cameraUpdate(dt,snap){
    pos=new THREE.Vector3(S.x+bx*d,h,S.z+bz*d);look=new THREE.Vector3(S.x-bx*2,.9,S.z-bz*2);
   }
   camera.up.set(0,1,0)}
- const k=snap?1:1-Math.exp(-dt*5);camPos.lerp(pos,k);camLook.lerp(look,k);camera.position.copy(camPos);camera.lookAt(camLook);
+ const k=snap?1:1-Math.exp(-dt*8);camPos.lerp(pos,k);camLook.lerp(look,k);camera.position.copy(camPos);camera.lookAt(camLook);
 }
 const STEP_TEXT=['출발 · 포크 20~30cm로 출발선 통과','A 드럼 위 팔레트 적재','전진 코스 주행 → B 드럼 하역','B에서 팔레트 재적재','후진 코스 주행 → A 원위치 하역','출발선 안 정지 · 포크 지면'];
 function curStep(){if(G.finished)return 6;if(!G.crossed)return 0;return 1+G.seq}
