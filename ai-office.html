@@ -109,10 +109,10 @@ h1, h2, h3 { font-family: var(--f-display); font-weight: 400; margin: 0; text-wr
 @media (prefers-reduced-motion: reduce) { .desk.arrive canvas, .st-review .bubble { animation: none } .btn:hover { transform: none } }
 
 /* side panel */
-.panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; max-height: calc(100vh - 24px); min-width: 0; }
+.panel { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); min-width: 0; }
 @media (max-width: 980px) { .panel { position: static; max-height: none; } }
-.tabs { display: flex; border-bottom: 2px solid var(--line-strong); }
-.tab { flex: 1; border: 0; background: transparent; padding: 10px 4px; font-family: var(--f-display); font-size: 15px; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; }
+.tabs { display: flex; border-bottom: 2px solid var(--line-strong); overflow-x: auto; scrollbar-width: none; }
+.tab { flex: 1 0 auto; border: 0; background: transparent; padding: 10px 4px; font-family: var(--f-display); font-size: 15px; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -2px; }
 .tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
 .tab .cnt { font-family: var(--f-pixel); font-size: 11px; background: var(--gold); color: #FFFFFF; border-radius: 6px; padding: 0 5px; margin-left: 3px; }
 .pbody { padding: 14px; overflow: auto; display: grid; gap: 14px; align-content: start; min-height: 0; }
@@ -152,12 +152,13 @@ textarea.input { resize: vertical; min-height: 84px; }
 .confirm { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 7px; border: 2px solid var(--bad); }
 
 /* modal */
-.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(10, 14, 22, .5); display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
-.modal { width: min(760px, 100%); max-height: 100%; display: flex; flex-direction: column; min-width: 0; }
+.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(10, 14, 22, .5); display: grid; justify-items: center; align-items: start; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal { width: min(760px, 100%); display: flex; flex-direction: column; min-width: 0; margin-block: 16px; }
+body.modal-open { overflow: hidden; }
 .modal-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 2px solid var(--line); }
 .modal-h h2 { font-size: 20px; overflow-wrap: anywhere; }
-.modal-b { padding: 16px; overflow: auto; display: grid; gap: 14px; min-height: 0; }
-.modal-f { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 12px 16px; border-top: 2px solid var(--line); }
+.modal-b { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.modal-f { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; padding: 12px 16px; border-top: 2px solid var(--line); position: sticky; bottom: 0; background: var(--panel); border-radius: 0 0 6px 6px; }
 .doc { font-size: 14.5px; line-height: 1.75; max-width: 68ch; overflow-wrap: anywhere; }
 .doc h4 { font-family: var(--f-display); font-weight: 400; font-size: 17px; margin: 16px 0 4px; }
 .doc p { margin: 6px 0; }
@@ -175,6 +176,32 @@ textarea.input { resize: vertical; min-height: 84px; }
 .prop { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 10px; align-items: start; padding: 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel-2); }
 .prop textarea { min-height: 56px; }
 
+.report { display: grid; gap: 12px; padding: 14px; border: 2px solid var(--gold); border-radius: 8px; background: var(--panel-2); }
+.rep-h { display: flex; gap: 10px; align-items: center; }
+.rep-h canvas { width: 64px; height: 52px; image-rendering: pixelated; border-radius: 6px; background: var(--floor-a); flex: none; }
+.rep-sum { margin: 0; font-size: 14px; line-height: 1.65; }
+.agenda { display: grid; gap: 6px; padding: 10px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel); }
+.agenda .t { font-weight: 600; overflow-wrap: anywhere; }
+.sec { border: 2px solid var(--line); border-radius: 8px; background: var(--panel); }
+.sec > summary { cursor: pointer; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-weight: 600; }
+.sec > div { padding: 0 12px 10px; font-size: 13px; }
+.sec h5 { margin: 8px 0 2px; font-size: 12px; color: var(--muted); letter-spacing: .03em; }
+.sec ul { margin: 0; padding-left: 18px; }
+.en-item { display: grid; gap: 2px; padding: 6px 0; border-bottom: 1.5px dashed var(--line); }
+.en-item b { font-size: 14.5px; }
+.post { display: grid; gap: 6px; padding: 10px 12px; border: 2px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.post.done { opacity: .6; }
+.post .txt { overflow-wrap: anywhere; white-space: pre-wrap; font-size: 13.5px; }
+.k-요청 { background: var(--warn); color: #FFFFFF; }
+.k-공유 { background: var(--chip); }
+.k-결정 { background: var(--accent); color: var(--accent-ink); }
+.k-완료 { background: var(--good); color: #FFFFFF; }
+.chat { display: grid; gap: 8px; max-height: 360px; overflow-y: auto; padding: 4px; }
+.msg { max-width: 88%; padding: 8px 10px; border-radius: 10px; font-size: 13.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.msg.me { justify-self: end; background: var(--accent); color: var(--accent-ink); }
+.msg.ai { justify-self: start; background: var(--panel-2); border: 1.5px solid var(--line); }
+.msg.ai p { margin: 4px 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .toasts { position: fixed; z-index: 60; left: 0; right: 0; bottom: 0; display: grid; justify-items: center; gap: 6px; padding: 0 max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); pointer-events: none; }
 .toast { background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-weight: 600; font-size: 13px; box-shadow: 3px 3px 0 var(--shadow); max-width: 100%; }
 .loading { padding: 40px 16px; text-align: center; color: var(--muted); font-family: var(--f-display); font-size: 18px; }
@@ -186,7 +213,7 @@ textarea.input { resize: vertical; min-height: 84px; }
       <canvas class="logo" id="logo" width="16" height="16" aria-hidden="true"></canvas>
       <button class="brand-name" id="brandBtn" title="회사 이름 바꾸기">
         <h1 id="companyName">내 AI 오피스</h1>
-        <small>사장님 전용 비서실 · <span class="clock" id="clock">--:--</span></small>
+        <small>매일 19:00 부서 보고 · <span class="clock" id="clock">--:--</span></small>
       </button>
     </div>
     <div class="stats" id="stats"></div>
@@ -218,15 +245,33 @@ textarea.input { resize: vertical; min-height: 84px; }
 
 /* ---------- game content ---------- */
 const DEPTS = [
-  { id: "strategy",  name: "전략실",        color: "#4E62F5" },
-  { id: "research",  name: "리서치랩",      color: "#1E9B7E" },
-  { id: "marketing", name: "마케팅팀",      color: "#E2553A" },
+  { id: "strategy",  name: "전략실·비서실",   color: "#4E62F5" },
   { id: "content",   name: "콘텐츠 스튜디오", color: "#D18A00" },
-  { id: "product",   name: "개발·디자인",   color: "#8A55E0" },
-  { id: "quant",     name: "퀀트데스크",    color: "#B83E78" },
-  { id: "ops",       name: "영업·운영",     color: "#2F84CF" },
+  { id: "video",     name: "영상편집팀",     color: "#D6336C" },
+  { id: "marketing", name: "마케팅팀",       color: "#E2553A" },
+  { id: "research",  name: "리서치랩",       color: "#1E9B7E" },
+  { id: "gamelab",   name: "게임랩",         color: "#7048E8" },
+  { id: "lang",      name: "영어학습팀",     color: "#1C7ED6" },
+  { id: "appdev",    name: "앱 개발팀",      color: "#0B7285" },
+  { id: "product",   name: "개발·디자인",    color: "#5F6B7A" },
+  { id: "newbiz",    name: "신사업팀",       color: "#A61E4D" },
+  { id: "smartfarm", name: "스마트팜 연구소", color: "#2F9E44" },
+  { id: "quant",     name: "퀀트데스크",     color: "#343A40" },
+  { id: "ops",       name: "영업·운영",      color: "#8D5524" },
 ];
 const ROLES = [
+  { key: "chief", dept: "strategy", title: "비서실장", desc: "부서 보고 취합, 안건 정리, 사장님 보고", ex: ["오늘 부서별 진행 상황을 한 장으로 정리", "이번 주 사장님이 결정할 안건 정리"] },
+  { key: "videoeditor", dept: "video", title: "영상 편집자", desc: "컷 편집, 자막 타이밍, 첫 3초 훅 편집", ex: ["오늘 클립 영상의 편집 개선점 5가지", "쇼츠 편집 템플릿 규칙 정리"] },
+  { key: "thumb", dept: "video", title: "썸네일·자막 디자이너", desc: "썸네일 문구, 자막 스타일, 표지 디자인", ex: ["표지 문구 10개 A/B 후보", "자막 스타일 가이드"] },
+  { key: "forkvet", dept: "gamelab", title: "지게차 베테랑 기사", desc: "물류센터 지게차 경력 15년. 실제 조작감과 안전 습관 검수", ex: ["실제 지게차와 다른 조작감 체크리스트", "현장에서 자주 하는 실수를 게임 미션으로"] },
+  { key: "forkinst", dept: "gamelab", title: "지게차 학원 강사", desc: "기능사 실기 지도 10년. 시험 코스와 감점 기준 검수", ex: ["실기 감점 항목별 연습 모드 설계", "수강생이 자주 떨어지는 구간 정리"] },
+  { key: "tutor", dept: "lang", title: "영어 튜터", desc: "사장님 영어 공부: 오늘의 표현, 퀴즈, 회화 연습", ex: ["운전 중 쓸 영어 표현 10개", "이번 주 복습 퀴즈 10문제"] },
+  { key: "uxr", dept: "lang", title: "UX 리서처", desc: "무료 학습 앱 비교, 사용성 테스트, 개선안", ex: ["무료 영어 회화 앱 5개 UX 비교", "우리 앱 첫 사용 흐름 개선안"] },
+  { key: "appplanner", dept: "appdev", title: "앱 기획자", desc: "앱 아이디어 발굴, MVP 범위, 수익 모델", ex: ["이번 주 앱 아이디어 5개와 평가표", "가장 좋은 아이디어 MVP 기획서"] },
+  { key: "appdev", dept: "appdev", title: "앱 개발자", desc: "구현 방식, 기술 스택, 개발 일정 산정", ex: ["웹앱으로 2주 안에 만드는 방법", "필요한 기능별 난이도와 일정"] },
+  { key: "bizscout", dept: "newbiz", title: "사업 아이템 발굴", desc: "요즘 뜨는 사업 아이템, 소자본 검증 방법", ex: ["집에서 시작할 수 있는 사업 아이템 5개", "아이템 1개 검증 계획(1주, 10만 원 이하)"] },
+  { key: "farmer", dept: "smartfarm", title: "재배 연구원", desc: "수경재배, 작물 선택, 양액·광량 관리", ex: ["집에서 키우기 쉬운 작물 5개 비교", "첫 수경재배 준비물과 순서"] },
+  { key: "iot", dept: "smartfarm", title: "IoT 엔지니어", desc: "ESP32 센서, 자동 제어, 데이터 기록", ex: ["ESP32 센서 배선도와 부품 목록", "텔레그램 알림 자동화 설계"] },
   { key: "strategist", dept: "strategy", title: "전략기획", desc: "수익모델, 사업 우선순위, 실행 로드맵 설계", ex: ["이번 달 수익 목표를 위한 우선순위 3가지와 이유", "수익모델 3가지 비교표와 추천안"] },
   { key: "pm", dept: "strategy", title: "프로젝트 매니저", desc: "일정 관리, 할 일 쪼개기, 진행 점검", ex: ["이번 주 할 일을 요일별 체크리스트로", "막혀 있는 일과 해결 순서 정리"] },
   { key: "market", dept: "research", title: "시장조사", desc: "타깃 고객, 시장 규모, 수요 신호 분석", ex: ["핵심 타깃 고객 페르소나 3명", "수요를 검증할 저비용 실험 5가지"] },
@@ -242,9 +287,9 @@ const ROLES = [
   { key: "devpm", dept: "product", title: "개발 PM", desc: "기능 명세, MVP 범위, 기술 선택", ex: ["MVP 기능 명세와 우선순위", "노코드로 만들 수 있는 범위 정리"] },
   { key: "automation", dept: "product", title: "자동화 엔지니어", desc: "반복 업무 자동화 방법과 스크립트", ex: ["매일 반복하는 일 자동화 방안 5개", "구글시트+메일 자동화 설계"] },
   { key: "designer", dept: "product", title: "디자인 기획", desc: "브랜딩, 화면 구성, 썸네일 콘셉트", ex: ["썸네일 콘셉트 5가지와 문구", "랜딩페이지 섹션 구성안"] },
-  { key: "gamedesign", dept: "product", title: "게임 기획", desc: "레벨·코스 설계, 조작감, 재미 요소와 수익 모델", ex: ["실기 코스를 단계별 연습 모드로 나눈 기획안", "게임 수익 모델 3가지 비교와 추천"] },
-  { key: "qa", dept: "product", title: "QA 테스터", desc: "테스트 시나리오, 버그 재현 절차, 출시 전 점검표", ex: ["출시 전 점검표 20항목", "실제 사용자 테스트 시나리오 5개"] },
-  { key: "convai", dept: "product", title: "대화 AI 설계", desc: "프롬프트, 대화 흐름, 교정 품질, 음성 UX", ex: ["교정 품질을 확인할 테스트 문장 20개", "대화 주제 카드 15개와 난이도 구분"] },
+  { key: "gamedesign", dept: "gamelab", title: "게임 기획", desc: "레벨·코스 설계, 조작감, 재미 요소와 수익 모델", ex: ["실기 코스를 단계별 연습 모드로 나눈 기획안", "게임 수익 모델 3가지 비교와 추천"] },
+  { key: "qa", dept: "gamelab", title: "QA 테스터", desc: "테스트 시나리오, 버그 재현 절차, 출시 전 점검표", ex: ["출시 전 점검표 20항목", "실제 사용자 테스트 시나리오 5개"] },
+  { key: "convai", dept: "lang", title: "대화 AI 설계", desc: "프롬프트, 대화 흐름, 교정 품질, 음성 UX", ex: ["교정 품질을 확인할 테스트 문장 20개", "대화 주제 카드 15개와 난이도 구분"] },
   { key: "quant", dept: "quant", title: "퀀트 전략가", desc: "매매 전략 규칙화, 백테스트 설계, 성과 지표", ex: ["단순 전략 3개를 매수·매도 규칙으로 정리", "백테스트 계획과 판단 지표"] },
   { key: "risk", dept: "quant", title: "리스크 관리", desc: "손실 한도, 포지션 크기, 주문 오류 방지", ex: ["자동매매 안전장치 체크리스트", "일·월 손실 한도와 자동 중단 규칙"] },
   { key: "sales", dept: "ops", title: "영업 담당", desc: "제안서, 콜드메일, 협업 제안", ex: ["협업 제안 콜드메일 3가지 버전", "B2B 제안서 목차와 핵심 문장"] },
@@ -256,7 +301,7 @@ const STARTER = [
   ["은솔","copy"],["태오","blog"],["모아","video"],["건우","devpm"],["소미","cs"],["재민","finance"],
 ];
 const NAMES = ["가을","라온","보라","세린","시우","아린","연우","예준","유나","윤슬","이안","주아","채원","하준","해솔","로운","단비","미르","바다","초롱","한결","다솜","누리","마루","빛나","새봄","온유","리안","별하","수아","지안","도하"];
-const MAX_STAFF = 40;
+const MAX_STAFF = 60;
 const ROLE = Object.fromEntries(ROLES.map(r => [r.key, r]));
 const DEPT = Object.fromEntries(DEPTS.map(d => [d.id, d]));
 
@@ -290,13 +335,13 @@ function md(src) {
 }
 
 /* ---------- store (db capability, else this browser) ---------- */
-const S = { agents: new Map(), projects: new Map(), tasks: new Map(), meta: {}, ready: false, mode: "loading", readOnly: false };
+const S = { agents: new Map(), projects: new Map(), tasks: new Map(), reports: new Map(), board: new Map(), meta: {}, ready: false, mode: "loading", readOnly: false };
 let db = null, sample = null;
 const chains = new Map();
 function chain(key, fn) { const p = (chains.get(key) || Promise.resolve()).then(fn, fn); chains.set(key, p.catch(() => {})); return p; }
 const LS_KEY = "ai-office-v1";
-function lsSave() { try { localStorage.setItem(LS_KEY, JSON.stringify({ agents: Object.fromEntries(S.agents), projects: Object.fromEntries(S.projects), tasks: Object.fromEntries(S.tasks), meta: S.meta })); } catch {} }
-function lsLoad() { try { const d = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (d) { for (const k of ["agents","projects","tasks"]) for (const [id, v] of Object.entries(d[k] || {})) S[k].set(id, v); S.meta = d.meta || {}; } } catch {} }
+function lsSave() { try { localStorage.setItem(LS_KEY, JSON.stringify({ agents: Object.fromEntries(S.agents), projects: Object.fromEntries(S.projects), tasks: Object.fromEntries(S.tasks), reports: Object.fromEntries(S.reports), board: Object.fromEntries(S.board), meta: S.meta })); } catch {} }
+function lsLoad() { try { const d = JSON.parse(localStorage.getItem(LS_KEY) || "null"); if (d) { for (const k of ["agents","projects","tasks","reports","board"]) for (const [id, v] of Object.entries(d[k] || {})) S[k].set(id, v); S.meta = d.meta || {}; } } catch {} }
 function writeErr(e) {
   if (e && e.code === "invalid_argument") { S.readOnly = true; toast("이 사무실은 보기 전용이에요. 편집 권한이 있어야 바꿀 수 있어요."); }
   else if (e && e.code === "quota_exceeded") toast("저장 공간이 가득 찼어요. 오래된 업무 기록을 지워 주세요.");
@@ -326,7 +371,7 @@ async function initStore() {
   }
   if (!db) { S.mode = "local"; lsLoad(); S.ready = true; renderAll(); return; }
   S.mode = "db";
-  let pending = 4; const got = () => { if (--pending <= 0 && !S.ready) { S.ready = true; clearTimeout(slow); } };
+  let pending = 6; const got = () => { if (--pending <= 0 && !S.ready) { S.ready = true; clearTimeout(slow); } };
   const slow = setTimeout(() => { if (!S.ready) { S.ready = true; toast("저장소 연결이 느려요. 보이는 내용이 최신이 아닐 수 있어요."); renderAll(); } }, 10000);
   const sub = (col, q) => {
     let first = true;
@@ -339,6 +384,8 @@ async function initStore() {
   sub("agents", db.collection("agents"));
   sub("projects", db.collection("projects"));
   sub("tasks", db.collection("tasks").orderBy("createdAt", "desc").limit(400));
+  sub("reports", db.collection("reports").orderBy("createdAt", "desc").limit(30));
+  sub("board", db.collection("board").orderBy("createdAt", "desc").limit(150));
   let mfirst = true;
   db.doc("meta/office").onSnapshot(d => { S.meta = d.exists ? d.data() : {}; if (mfirst && !d.metadata.fromCache) { mfirst = false; got(); } renderAll(); }, () => { if (mfirst) { mfirst = false; got(); } });
 }
@@ -566,7 +613,7 @@ function renderOffice() {
     if (!list.length) return "";
     const on = list.filter(a => a.onDuty).length;
     return `<section class="room" aria-label="${esc(d.name)}">
-      <div class="room-head"><h2><span class="dot" style="background:${d.color}"></span>${esc(d.name)}</h2><span class="chip num">${on}/${list.length}</span></div>
+      <div class="room-head"><h2><span class="dot" style="background:${d.color}"></span>${esc(d.name)}</h2><span class="row" style="gap:6px">${(() => { const n = [...S.board.values()].filter(x => x.kind === "요청" && x.status !== "done" && (x.to || []).includes(d.id)).length; return n ? `<button class="chip k-요청" data-boardfilter="${d.id}" style="border:0">요청 ${n}</button>` : ""; })()}<span class="chip num">${on}/${list.length}</span></span></div>
       <div class="desks">${list.map(a => {
         const st = agentState(a); const r = ROLE[a.role];
         const arrive = a.onDuty && prevDuty.get(a.id) === false ? " arrive" : "";
@@ -595,7 +642,9 @@ let tab = "inbox", confirmFire = false, editProject = null;
 function renderTabs() {
   const rv = tasksSorted().filter(t => t.status === "review").length;
   const blocked = SESS.list.filter(x => sessState(x).s === "review").length;
-  const tabs = [["agent", "비서"], ["inbox", "결재함", rv], ["field", "현장", blocked], ["projects", "프로젝트"], ["log", "기록"]];
+  const openAg = reportsSorted().slice(0, 1).reduce((n, r) => n + (r.agenda || []).filter(a => !a.decision).length, 0);
+  const openReq = [...S.board.values()].filter(x => x.kind === "요청" && x.status !== "done").length;
+  const tabs = [["inbox", "보고", rv + openAg], ["board", "게시판", openReq], ["field", "현장", blocked], ["agent", "비서"], ["projects", "프로젝트"], ["log", "기록"]];
   $("#tabs").innerHTML = tabs.map(([k, n, c]) => `<button class="tab" role="tab" aria-selected="${tab === k}" data-tab="${k}">${n}${c ? `<span class="cnt">${c}</span>` : ""}</button>`).join("");
 }
 function projectOptions(sel) {
@@ -624,8 +673,13 @@ function renderPanel() {
       <div class="field"><label for="f-task">업무 지시</label><textarea class="input" id="f-task" placeholder="예: ${esc(r.ex[0])}">${esc(dr.task || "")}</textarea></div>
       <div class="sugs">${r.ex.map(x => `<button class="sug" data-sug="${esc(x)}">${esc(x)}</button>`).join("")}</div>
       <div class="row"><button class="btn primary" id="assign">업무 지시하기</button><span class="muted" style="font-size:12px" id="assignNote"></span></div>
+      <div class="sect-h"><h3>${esc(a.name)}와 대화</h3>${(chats[a.id] || []).length ? `<button class="btn sm ghost" id="chatClear">대화 지우기</button>` : ""}</div>
+      <div class="chat" id="chatLog"></div>
+      <div class="field"><label for="chatIn" class="sr">메시지</label><textarea class="input" id="chatIn" style="min-height:60px" placeholder="${a.role === "tutor" ? "Try in English! 한국어로 물어봐도 돼요." : "궁금한 걸 편하게 물어보세요."}"></textarea></div>
+      <div class="row"><button class="btn" id="chatSend">보내기</button><button class="btn ghost sm" id="chatStop" hidden>멈추기</button></div>
       <div class="sect-h"><h3>${esc(a.name)}의 업무</h3></div>
       <div class="list" id="agentTasks"></div>`;
+    renderChat(a.id);
   } else if (tab === "projects") {
     const p = editProject && editProject !== "new" ? { id: editProject, ...(S.projects.get(editProject) || {}) } : {};
     b.innerHTML = `
@@ -635,11 +689,24 @@ function renderPanel() {
         <div class="field"><label for="p-name">이름</label><input class="input" id="p-name" value="${esc(p.name)}" placeholder="예: 스마트스토어 문구 굿즈"></div>
         <div class="field"><label for="p-goal">목표</label><input class="input" id="p-goal" value="${esc(p.goal)}" placeholder="예: 3개월 안에 월 매출 300만 원"></div>
         <div class="field"><label for="p-rev">수익 방식</label><input class="input" id="p-rev" value="${esc(p.revenue)}" placeholder="예: 제품 판매, 광고 수익, 구독"></div>
+        <div class="field"><label for="p-lead">주관 부서</label><select class="input" id="p-lead"><option value="">정하지 않음</option>${DEPTS.map(d => `<option value="${d.id}"${p.lead === d.id ? " selected" : ""}>${esc(d.name)}</option>`).join("")}</select></div>
         <div class="field"><label for="p-sess">연결된 Claude 세션</label><select class="input" id="p-sess"><option value="">연결 안 함</option>${SESS.list.map(x => `<option value="${esc(x.id)}"${p.sessionId === x.id ? " selected" : ""}>${esc(sessTitle(x))}</option>`).join("")}${p.sessionId && !SESS.byId.has(p.sessionId) ? `<option value="${esc(p.sessionId)}" selected>(목록에 없는 세션)</option>` : ""}</select></div>
         <div class="field"><label for="p-notes">현재 상황·메모</label><textarea class="input" id="p-notes" placeholder="예: 상품 5개 등록, 하루 방문 40명, 광고는 아직 안 함">${esc(p.notes)}</textarea></div>
         <div class="row"><button class="btn primary" id="p-save">저장</button><button class="btn ghost" id="p-cancel">취소</button></div></div>`
       : `<div class="row"><button class="btn primary" id="p-new">+ 프로젝트 추가</button></div>`}
       <div class="list" id="projList"></div>`;
+  } else if (tab === "board") {
+    const opts = DEPTS.map(d => `<option value="${d.id}">${esc(d.name)}</option>`).join("");
+    b.innerHTML = `<div class="note">부서끼리 주고받는 공유·요청·결정이 모이는 곳이에요. 매일 저녁 보고 때 비서실장이 정리하고, 요청은 다음 보고까지 답하는 게 규칙이에요.</div>
+      <details class="sec"><summary>사장님 글 쓰기</summary><div style="display:grid;gap:8px;padding-top:6px">
+        <div class="row"><select class="input" id="bp-to" style="width:auto"><option value="all">전체 부서</option>${opts}</select>
+          <select class="input" id="bp-kind" style="width:auto"><option>요청</option><option>공유</option><option>결정</option></select></div>
+        <textarea class="input" id="bp-text" placeholder="예: 스마트팜 성장 일지를 클립 콘텐츠로 만들 수 있는지 콘텐츠 스튜디오가 검토해 줘"></textarea>
+        <div class="row"><button class="btn primary sm" id="bp-go">올리기</button></div></div></details>
+      <div class="row"><label for="bf" class="muted" style="font-size:12px">부서</label><select class="input" id="bf" style="width:auto"><option value="">전체 보기</option>${opts}</select>
+        <label class="row" style="gap:4px;font-size:12px"><input type="checkbox" id="bfOpen"${boardOpenOnly ? " checked" : ""}>열린 요청만</label></div>
+      <div class="list" id="dynList"></div>`;
+    $("#bf").value = boardFilter;
   } else if (tab === "field") {
     const x = selectedSession && SESS.byId.get(selectedSession);
     b.innerHTML = x ? `<div id="sessDetail"></div>
@@ -686,13 +753,26 @@ function renderPanelDynamic() {
     const attn = ts.filter(t => ["stuck", "failed", "stopped"].includes(taskState(t)));
     const q = ts.filter(t => t.status === "queued");
     const work = ts.filter(t => running.has(t.id));
-    $("#dynList").innerHTML = `${noClaude}
+    $("#dynList").innerHTML = `${renderReports()}${noClaude}
       ${q.length && sample && !pumpArmed ? `<div class="note row" style="justify-content:space-between"><span>대기 중인 업무 ${q.length}건이 있어요.</span><button class="btn sm primary" id="startQueue">지금 시작</button></div>` : ""}
       <div class="sect-h"><h3>결재 대기</h3><span class="muted">${rv.length}건</span></div>
-      ${rv.length ? rv.map(t => taskItem(t)).join("") : `<div class="empty"><p>결재할 결과물이 없어요.<br>비서를 눌러 업무를 지시하거나, 상단의 <b>아침 회의</b>로 한 번에 배정해 보세요.</p></div>`}
+      ${rv.length ? rv.map(t => taskItem(t)).join("") : `<p class="muted" style="margin:0;font-size:12.5px">비서에게 직접 맡긴 업무의 결과물이 여기 올라와요.</p>`}
       ${work.length ? `<div class="sect-h"><h3>작업 중</h3><span class="muted">${work.length}건</span></div>${work.map(t => taskItem(t)).join("")}` : ""}
       ${q.length ? `<div class="sect-h"><h3>대기</h3><span class="muted">${q.length}건</span></div>${q.map(t => taskItem(t)).join("")}` : ""}
       ${attn.length ? `<div class="sect-h"><h3>확인 필요</h3><span class="muted">${attn.length}건</span></div>${attn.map(t => taskItem(t)).join("")}` : ""}`;
+  } else if (tab === "board") {
+    const posts = [...S.board.entries()].map(([id, x]) => ({ id, ...x })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      .filter(x => !boardFilter || x.from === boardFilter || (x.to || []).includes(boardFilter) || (x.to || []).includes("all"))
+      .filter(x => !boardOpenOnly || (x.kind === "요청" && x.status !== "done"));
+    const dn = id => id === "boss" ? "사장님" : id === "all" ? "전체" : (DEPT[id]?.name || id);
+    const dc = id => DEPT[id] ? `<span class="chip dept-chip" style="background:${DEPT[id].color}">${esc(dn(id))}</span>` : `<span class="chip">${esc(dn(id))}</span>`;
+    $("#dynList").innerHTML = posts.length ? posts.map(x => `<div class="post${x.status === "done" ? " done" : ""}">
+      <div class="row" style="gap:6px;font-size:12px"><span class="chip k-${esc(x.kind)}">${esc(x.kind)}${x.status === "done" ? " · 완료" : ""}</span>${dc(x.from)}<span class="muted">→</span>${(x.to || []).map(dc).join("")}<span class="muted">· ${esc(x.date || ago(x.createdAt))}</span></div>
+      ${x.project && S.projects.get(x.project) ? `<span class="muted" style="font-size:12px">프로젝트: ${esc(S.projects.get(x.project).name)}</span>` : ""}
+      <div class="txt">${esc(x.text)}</div>
+      ${x.reply ? `<div class="note">답: ${esc(x.reply)}</div>` : ""}
+      ${x.kind === "요청" && x.status !== "done" ? `<div class="row"><button class="btn sm" data-postdone="${esc(x.id)}">완료 처리</button></div>` : ""}</div>`).join("")
+      : `<div class="empty"><p>아직 글이 없어요. 오늘 저녁 보고부터 부서들이 서로 공유·요청을 올려요.</p></div>`;
   } else if (tab === "field") {
     const x = selectedSession && SESS.byId.get(selectedSession);
     const d = $("#sessDetail");
@@ -727,11 +807,81 @@ function renderPanelDynamic() {
       return `<div class="item" style="cursor:default"><span class="t">${esc(p.name)}${p.example ? ` <span class="chip">예시</span>` : ""}</span>
         ${p.goal ? `<span style="font-size:13px">목표: ${esc(p.goal)}</span>` : ""}
         ${p.revenue ? `<span class="muted" style="font-size:12.5px">수익 방식: ${esc(p.revenue)}</span>` : ""}
+        ${p.lead ? `<span class="row" style="gap:4px;font-size:12px"><span class="muted">주관</span><span class="chip dept-chip" style="background:${DEPT[p.lead]?.color || "#5F6B7A"}">${esc(DEPT[p.lead]?.name || p.lead)}</span>${(p.support || []).length ? `<span class="muted">협업</span>${p.support.map(x => `<span class="chip">${esc(DEPT[x]?.name || x)}</span>`).join("")}` : ""}</span>` : ""}
         ${p.notes ? `<span class="pv">${esc(p.notes)}</span>` : ""}
         <span class="meta"><span>업무 ${n.length}건 · 승인 ${dn}건</span></span>
         <div class="row"><button class="btn sm" data-pedit="${esc(p.id)}">수정</button>${n.length ? "" : `<button class="btn sm ghost danger" data-pdel="${esc(p.id)}">삭제</button>`}</div></div>`;
     }).join("") : `<div class="empty"><p>등록된 프로젝트가 없어요.</p></div>`;
   }
+}
+
+/* ---------- daily reports ---------- */
+let openReport = null, boardFilter = "", boardOpenOnly = false;
+const reportsSorted = () => [...S.reports.entries()].map(([id, r]) => ({ id, ...r })).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+function dayLabel(d) { const t = new Date(String(d) + "T00:00:00"); if (isNaN(t)) return esc(d || ""); return `${t.getMonth() + 1}/${t.getDate()} (${"일월화수목금토"[t.getDay()]})`; }
+function renderReports() {
+  const reps = reportsSorted();
+  if (!reps.length) return `<div class="empty"><p>매일 저녁 7시에 비서실장이 부서별 보고를 여기 올려요.</p></div>`;
+  const r = reps.find(x => x.id === openReport) || reps[0];
+  const agenda = (r.agenda || []);
+  const stChip = s => s === "done" ? `<span class="chip s-done">완료</span>` : s === "blocked" ? `<span class="chip s-failed">막힘</span>` : s === "new" ? `<span class="chip">신설</span>` : `<span class="chip s-review">진행 중</span>`;
+  const li = arr => (arr || []).length ? `<ul>${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : "";
+  return `<div class="report">
+    <div class="rep-h"><canvas width="32" height="26" data-sprite="${esc(chiefId() || "")}" data-st="review"></canvas>
+      <div style="min-width:0"><h3 style="font-size:18px">${dayLabel(r.date)} ${esc(r.title || "저녁 보고")}</h3><span class="muted" style="font-size:12px">${esc(r.by || "비서실장")} · ${ago(r.createdAt)}</span></div></div>
+    ${r.summary ? `<p class="rep-sum">${esc(r.summary)}</p>` : ""}
+    ${agenda.length ? `<div class="sect-h"><h3>결정할 안건</h3><span class="muted">${agenda.filter(a => !a.decision).length}건 남음</span></div>
+      ${agenda.map((a, i) => { const p = S.projects.get(a.project); const d = DEPT[a.dept];
+        return `<div class="agenda"><div class="row" style="gap:6px;font-size:12px">${d ? `<span class="chip dept-chip" style="background:${d.color}">${esc(d.name)}</span>` : ""}${p ? `<span class="muted">${esc(p.name)}</span>` : ""}</div>
+          <div class="t">${esc(a.text)}</div>
+          ${a.detail ? `<div class="muted" style="font-size:12.5px;white-space:pre-wrap">${esc(a.detail)}</div>` : ""}
+          ${a.decision ? `<div class="row"><span class="chip s-done">결정: ${esc(a.decision.choice)}</span>${a.decision.note ? `<span style="font-size:12.5px">${esc(a.decision.note)}</span>` : ""}<button class="btn sm ghost" data-agundo="${esc(r.id)}|${i}">바꾸기</button>${p?.sessionId && mcpNS ? `<button class="btn sm" data-agfwd="${esc(r.id)}|${i}">현장에 전달</button>` : ""}</div>`
+          : `<input class="input" id="agn-${i}" placeholder="한마디 덧붙이기 (선택)" style="font-size:12.5px">
+             <div class="row">${(a.options && a.options.length ? a.options : ["진행", "보류"]).map((o, j) => `<button class="btn sm${j === 0 ? " primary" : ""}" data-agpick="${esc(r.id)}|${i}|${j}">${esc(o)}</button>`).join("")}</div>`}</div>`; }).join("")}` : ""}
+    ${(r.sections || []).length ? `<div class="sect-h"><h3>부서별 보고</h3></div>${r.sections.map(x => { const d = DEPT[x.dept];
+      return `<details class="sec"><summary>${d ? `<span class="chip dept-chip" style="background:${d.color}">${esc(d.name)}</span>` : ""}<span style="flex:1;min-width:0">${esc(x.title || "")}</span>${stChip(x.status)}</summary><div>
+        ${x.done?.length ? `<h5>한 일</h5>${li(x.done)}` : ""}${x.issues?.length ? `<h5>문제·위험</h5>${li(x.issues)}` : ""}${x.next?.length ? `<h5>다음 할 일</h5>${li(x.next)}` : ""}${x.boss?.length ? `<h5>사장님이 할 일</h5>${li(x.boss)}` : ""}</div></details>`; }).join("")}` : ""}
+    ${r.english?.items?.length ? `<details class="sec" open><summary><span class="chip dept-chip" style="background:${DEPT.lang.color}">오늘의 영어</span><span>${esc(r.english.theme || "")}</span></summary><div>
+      ${r.english.items.map(e => `<div class="en-item"><b>${esc(e.en)}</b><span>${esc(e.ko)}</span>${e.tip ? `<span class="muted" style="font-size:12px">${esc(e.tip)}</span>` : ""}</div>`).join("")}
+      ${(r.english.quiz || []).length ? `<h5>퀴즈 (눌러서 정답 보기)</h5>${r.english.quiz.map(q => `<details style="padding:4px 0"><summary style="cursor:pointer">${esc(q.q)}</summary><div style="padding:4px 0 0 14px;color:var(--good);font-weight:600">${esc(q.a)}</div></details>`).join("")}` : ""}</div></details>` : ""}
+    ${reps.length > 1 ? `<div class="row" style="gap:6px;font-size:12px"><span class="muted">지난 보고</span>${reps.slice(0, 10).map(x => `<button class="btn sm${x.id === r.id ? " primary" : ""}" data-report="${esc(x.id)}">${dayLabel(x.date)}</button>`).join("")}</div>` : ""}
+  </div>`;
+}
+const chiefId = () => { for (const [id, a] of S.agents) if (a.role === "chief") return id; return null; };
+
+/* ---------- chat with a secretary ---------- */
+const chats = {}; let chatCtl = null;
+try { const c = JSON.parse(localStorage.getItem("ai-office-chats") || "{}"); Object.assign(chats, c); } catch {}
+function saveChats() { try { localStorage.setItem("ai-office-chats", JSON.stringify(Object.fromEntries(Object.entries(chats).map(([k, v]) => [k, v.slice(-30)])))); } catch {} }
+function renderChat(aid, liveText) {
+  const el = $("#chatLog"); if (!el) return;
+  const list = chats[aid] || [];
+  el.innerHTML = list.map(m => `<div class="msg ${m.role === "user" ? "me" : "ai"}">${m.role === "user" ? esc(m.content) : md(m.content)}</div>`).join("")
+    + (liveText !== undefined ? `<div class="msg ai">${liveText ? md(liveText) : `<span class="thinking">생각하는 중…</span>`}</div>` : "")
+    || `<p class="muted" style="margin:0;font-size:12.5px">${ROLE[S.agents.get(aid)?.role]?.key === "tutor" ? "영어로 말을 걸어 보세요. 틀린 부분은 한국어로 고쳐 드려요." : "업무 지시 전에 편하게 물어보거나 아이디어를 같이 다듬어 보세요."}</p>`;
+  el.scrollTop = el.scrollHeight;
+}
+function chatRules(a) {
+  const r = ROLE[a.role] || ROLES[0];
+  const ps = projectsSorted().map(p => `- ${p.name}: ${p.goal || ""}`).join("\n");
+  if (a.role === "tutor") return `You are ${a.name}, a friendly English tutor for a Korean adult learner (a busy business owner who also practices English while driving). Keep replies short (2-5 sentences), natural spoken English at an intermediate level, and end with one easy follow-up question. If the learner's last message has English mistakes or unnatural phrasing, add a line starting with "✏️ 교정:" in Korean showing the corrected sentence and a one-line reason. If they write in Korean, give the natural English way to say it, then ask them to try saying it. Use the learner's projects as conversation topics when helpful:\n${ps}`;
+  return `너는 사장님의 AI 비서 "${a.name}"이고 담당은 ${r.title}(${r.desc})이다. 사장님과 메신저로 대화 중이다. 짧고 친근한 존댓말로, 핵심부터 답하라(보통 3~8문장). 모르는 사실은 지어내지 말고 확인이 필요하다고 말하라. 큰 작업이 필요하면 "업무로 지시해 주시면 정리해서 올릴게요"라고 안내하라.\n[사장님 프로젝트]\n${ps}`;
+}
+async function sendChat() {
+  const aid = selected, a = aid && S.agents.get(aid); const inp = $("#chatIn");
+  if (!a || !inp) return; const txt = inp.value.trim(); if (!txt) return;
+  if (!sample) { toast("Claude 연결이 없는 화면이라 대화할 수 없어요."); return; }
+  chats[aid] = [...(chats[aid] || []), { role: "user", content: txt }]; inp.value = ""; saveChats();
+  renderChat(aid, ""); $("#chatSend").disabled = true; $("#chatStop").hidden = false;
+  chatCtl = new AbortController();
+  const turns = [{ role: "user", content: chatRules({ id: aid, ...a }) }, { role: "assistant", content: a.role === "tutor" ? "Got it! Let's practice." : "네, 사장님. 말씀하세요." }, ...chats[aid].slice(-20)];
+  try {
+    const res = await sample(turns, { cache: false, modelTier: "quick", signal: chatCtl.signal, onText: ({ text }) => { if (selected === aid) renderChat(aid, text); } });
+    chats[aid].push({ role: "assistant", content: res.text });
+  } catch (e) {
+    if (e?.text) chats[aid].push({ role: "assistant", content: e.text + (e.code === "cancelled" ? "" : "\n\n(답이 끊겼어요)") });
+    else if (e?.code !== "cancelled") toast(e?.code === "rate_limited" ? "Claude 사용량이 많아요. 잠시 뒤 다시 보내 주세요." : "답을 받지 못했어요. 다시 보내 주세요.");
+  } finally { saveChats(); chatCtl = null; if (selected === aid) { renderChat(aid); if ($("#chatSend")) $("#chatSend").disabled = false; if ($("#chatStop")) $("#chatStop").hidden = true; } }
 }
 
 /* ---------- work ---------- */
@@ -798,14 +948,15 @@ async function assign(agentId, projectId, title, source = "manual") {
 
 /* ---------- modals ---------- */
 let modalTask = null;
-function closeModal() { $("#modalRoot").innerHTML = ""; modalTask = null; }
+function closeModal() { $("#modalRoot").innerHTML = ""; modalTask = null; document.body.classList.remove("modal-open"); }
+function shownModal(keep) { document.body.classList.add("modal-open"); const ov = $("#ov"); if (!ov) return; if (keep) ov.scrollTop = keep; else { ov.scrollTop = 0; ov.querySelector(".modal")?.scrollIntoView({ block: "nearest" }); } }
 function openTask(id) { modalTask = id; refreshModal(id, true); }
 function refreshModal(id, force) {
   if (modalTask !== id && !force) return;
   const t0 = S.tasks.get(id); if (!t0) { closeModal(); return; }
   const t = { id, ...t0 }, st = taskState(t), a = S.agents.get(t.agentId), p = S.projects.get(t.projectId);
   const live = running.get(id);
-  const keepFb = $("#fb")?.value || "", keepScroll = $(".modal-b")?.scrollTop || 0;
+  const keepFb = $("#fb")?.value || "", keepScroll = force ? 0 : ($("#ov")?.scrollTop || 0);
   const body = live ? (live.text ? md(live.text) : `<p class="thinking">${esc(a?.name || "비서")}이(가) 생각하는 중…</p>`) : (t.result ? md(t.result) : `<p class="muted">${st === "queued" ? "아직 시작 전이에요." : "결과물이 없어요."}</p>`);
   $("#modalRoot").innerHTML = `<div class="overlay" id="ov"><div class="modal box" role="dialog" aria-modal="true" aria-labelledby="mt">
     <div class="modal-h"><div style="display:grid;gap:6px;min-width:0"><h2 id="mt">${esc(t.title)}</h2>
@@ -823,7 +974,7 @@ function refreshModal(id, force) {
       ${!live ? `<button class="btn ghost danger" id="m-del">기록 삭제</button>` : ""}
     </div></div></div>`;
   if (keepFb && $("#fb")) $("#fb").value = keepFb;
-  if (keepScroll && $(".modal-b")) $(".modal-b").scrollTop = keepScroll;
+  shownModal(keepScroll);
 }
 function liveModal(id, text) { if (modalTask !== id) return; const el = $("#docBody"); if (el) el.innerHTML = md(text); }
 
@@ -832,12 +983,14 @@ function openHire(dept) {
   const used = new Set(agentsSorted().map(a => a.name));
   const name = NAMES.filter(n => !used.has(n))[Math.floor(Math.random() * 20)] || "새 비서";
   const draw = () => {
+    const keep = $("#ov")?.scrollTop || 0;
     $("#modalRoot").innerHTML = `<div class="overlay" id="ov"><div class="modal box" role="dialog" aria-modal="true" aria-labelledby="ht">
       <div class="modal-h"><div><h2 id="ht">비서 채용</h2><div class="muted" style="font-size:12.5px">현재 ${S.agents.size}명 · 최대 ${MAX_STAFF}명</div></div><button class="btn ghost" data-close>닫기</button></div>
       <div class="modal-b"><div class="field"><label for="h-name">이름</label><input class="input" id="h-name" value="${esc($("#h-name")?.value || name)}" maxlength="12"></div>
         ${DEPTS.map(d => `<div style="display:grid;gap:6px"><div class="row"><span class="chip dept-chip" style="background:${d.color}">${esc(d.name)}</span></div>
           <div class="roles">${ROLES.filter(r => r.dept === d.id).map(r => `<button class="role-opt" data-role="${r.key}" aria-pressed="${pick === r.key}"><b>${esc(r.title)}</b><small>${esc(r.desc)}</small></button>`).join("")}</div></div>`).join("")}</div>
       <div class="modal-f"><button class="btn primary" id="h-go"${S.agents.size >= MAX_STAFF ? " disabled" : ""}>채용하고 출근시키기</button></div></div></div>`;
+    shownModal(keep);
   };
   draw();
   $("#modalRoot").onclick = async e => {
@@ -857,7 +1010,7 @@ let meetingCtl = null;
 async function openMeeting() {
   const on = agentsSorted().filter(a => a.onDuty), ps = projectsSorted();
   const shell = inner => { $("#modalRoot").innerHTML = `<div class="overlay" id="ov"><div class="modal box" role="dialog" aria-modal="true" aria-labelledby="mt2">
-    <div class="modal-h"><div><h2 id="mt2">아침 회의</h2><div class="muted" style="font-size:12.5px">출근한 비서 ${on.length}명에게 프로젝트에 맞는 업무를 하나씩 배정해요.</div></div><button class="btn ghost" data-close>닫기</button></div>${inner}</div></div>`; };
+    <div class="modal-h"><div><h2 id="mt2">아침 회의</h2><div class="muted" style="font-size:12.5px">출근한 비서 ${on.length}명에게 프로젝트에 맞는 업무를 하나씩 배정해요.</div></div><button class="btn ghost" data-close>닫기</button></div>${inner}</div></div>`; shownModal(); };
   if (!on.length) { shell(`<div class="modal-b"><div class="empty"><p>출근한 비서가 없어요. 먼저 <b>전체 출근</b>을 눌러 주세요.</p></div></div>`); return; }
   if (!ps.length) { shell(`<div class="modal-b"><div class="empty"><p>회의할 프로젝트가 없어요. 프로젝트 탭에서 지금 하는 일을 먼저 등록해 주세요.</p></div></div>`); return; }
   if (!sample) { shell(`<div class="modal-b"><div class="note">Claude 연결이 없는 화면이라 회의를 열 수 없어요. claude.ai에서 이 페이지를 열어 주세요.</div></div>`); return; }
@@ -920,6 +1073,21 @@ document.addEventListener("click", async e => {
     for (let i = 0; i < STARTER.length; i++) await put("agents", uid("a_"), { name: STARTER[i][0], role: STARTER[i][1], onDuty: false, xp: 0, energy: 100, hiredAt: base + i });
     toast("기본 팀 12명이 입사했어요. 전체 출근을 눌러 보세요!"); return;
   }
+  const rp = el.closest("[data-report]"); if (rp) { openReport = rp.dataset.report; renderPanelDynamic(); return; }
+  const ap = el.closest("[data-agpick]");
+  if (ap) { const [rid, i, j] = ap.dataset.agpick.split("|"); const r = S.reports.get(rid); if (!r) return;
+    const ag = (r.agenda || []).map(x => ({ ...x })); const it = ag[+i]; if (!it) return;
+    it.decision = { choice: (it.options && it.options.length ? it.options : ["진행", "보류"])[+j], note: ($("#agn-" + i)?.value || "").trim().slice(0, 500), at: now() };
+    await patch("reports", rid, { agenda: ag }); toast("결정을 기록했어요. 다음 보고 때 부서가 반영해요."); return; }
+  const au = el.closest("[data-agundo]");
+  if (au) { const [rid, i] = au.dataset.agundo.split("|"); const r = S.reports.get(rid); if (!r) return;
+    const ag = (r.agenda || []).map(x => ({ ...x })); if (ag[+i]) delete ag[+i].decision; await patch("reports", rid, { agenda: ag }); return; }
+  const af = el.closest("[data-agfwd]");
+  if (af) { const [rid, i] = af.dataset.agfwd.split("|"); const it = S.reports.get(rid)?.agenda?.[+i]; const p = it && S.projects.get(it.project); if (!p?.sessionId) return;
+    sendDrafts[p.sessionId] = `[비서실 전달] 사장님 결정 사항이에요.\n안건: ${it.text}\n결정: ${it.decision?.choice || ""}${it.decision?.note ? "\n사장님 메모: " + it.decision.note : ""}\n\n이 결정대로 진행하고, 결과를 짧게 정리해 주세요.`;
+    selectedSession = p.sessionId; tab = "field"; renderAll(true); return; }
+  const bfl = el.closest("[data-boardfilter]"); if (bfl) { boardFilter = bfl.dataset.boardfilter; boardOpenOnly = true; tab = "board"; renderAll(true); return; }
+  const pdn = el.closest("[data-postdone]"); if (pdn) { await patch("board", pdn.dataset.postdone, { status: "done", doneAt: now() }); return; }
   const sd = el.closest("[data-session]");
   if (sd) { selectedSession = sd.dataset.session; tab = "field"; renderAll(true); if (innerWidth <= 980) $("#panel").scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); return; }
   const tb = el.closest("[data-tab]"); if (tb) { tab = tb.dataset.tab; editProject = null; renderPanel(); return; }
@@ -940,7 +1108,7 @@ document.addEventListener("click", async e => {
       const cur = S.meta.companyName || "내 AI 오피스";
       $("#brandBtn").outerHTML = `<form id="nameForm" class="row"><input class="input" id="nameIn" value="${esc(cur)}" maxlength="20" style="width:200px"><button class="btn sm primary">저장</button></form>`;
       $("#nameIn").focus(); $("#nameIn").select();
-      $("#nameForm").onsubmit = async ev => { ev.preventDefault(); const v = $("#nameIn").value.trim().slice(0, 20) || "내 AI 오피스"; $("#nameForm").outerHTML = `<button class="brand-name" id="brandBtn" title="회사 이름 바꾸기"><h1 id="companyName"></h1><small>사장님 전용 비서실 · <span class="clock" id="clock">--:--</span></small></button>`; await putMeta({ companyName: v }); renderHeader(); renderSky(); };
+      $("#nameForm").onsubmit = async ev => { ev.preventDefault(); const v = $("#nameIn").value.trim().slice(0, 20) || "내 AI 오피스"; $("#nameForm").outerHTML = `<button class="brand-name" id="brandBtn" title="회사 이름 바꾸기"><h1 id="companyName"></h1><small>매일 19:00 부서 보고 · <span class="clock" id="clock">--:--</span></small></button>`; await putMeta({ companyName: v }); renderHeader(); renderSky(); };
       break;
     }
     case "dutyBtn": if (a) { if (a.onDuty && [...running.keys()].some(k => S.tasks.get(k)?.agentId === selected)) { toast("작업을 마친 뒤에 퇴근시킬 수 있어요."); break; } await patch("agents", selected, a.onDuty ? { onDuty: false } : { onDuty: true, energy: 100, dutyAt: now() }); if (!a.onDuty) pump(); } break;
@@ -958,6 +1126,15 @@ document.addEventListener("click", async e => {
       break;
     }
     case "sessConnect": connectSessions(); break;
+    case "chatSend": sendChat(); break;
+    case "chatStop": chatCtl?.abort(); break;
+    case "chatClear": if (selected) { chats[selected] = []; saveChats(); renderPanel(); } break;
+    case "bp-go": {
+      const txt = ($("#bp-text").value || "").trim(); if (!txt) { toast("내용을 적어 주세요."); break; }
+      const to = $("#bp-to").value; const d = new Date();
+      await put("board", uid("b_"), { from: "boss", to: [to], kind: $("#bp-kind").value, text: txt.slice(0, 2000), status: "open", date: `${d.getMonth() + 1}/${d.getDate()}`, createdAt: now() });
+      $("#bp-text").value = ""; toast("올렸어요. 오늘 저녁 보고 때 해당 부서가 답해요."); break;
+    }
     case "sessSend": {
       const sid = selectedSession, msg = ($("#s-msg")?.value || "").trim();
       if (!sid || !msg) { toast("보낼 내용을 적어 주세요."); break; }
@@ -985,7 +1162,7 @@ document.addEventListener("click", async e => {
     case "p-save": {
       const name = $("#p-name").value.trim(); if (!name) { toast("프로젝트 이름을 적어 주세요."); break; }
       const pid = editProject === "new" ? uid("p_") : editProject, prev = S.projects.get(pid) || {};
-      await put("projects", pid, { name: name.slice(0, 60), goal: $("#p-goal").value.trim().slice(0, 200), revenue: $("#p-rev").value.trim().slice(0, 200), notes: $("#p-notes").value.trim().slice(0, 2000), sessionId: $("#p-sess").value || null, createdAt: prev.createdAt || now() });
+      await put("projects", pid, { name: name.slice(0, 60), goal: $("#p-goal").value.trim().slice(0, 200), revenue: $("#p-rev").value.trim().slice(0, 200), notes: $("#p-notes").value.trim().slice(0, 2000), sessionId: $("#p-sess").value || null, lead: $("#p-lead").value || null, support: prev.support || [], createdAt: prev.createdAt || now() });
       editProject = null; renderPanel(); toast("프로젝트를 저장했어요."); break;
     }
     // task modal
@@ -1019,13 +1196,16 @@ document.addEventListener("input", e => {
   if (e.target.id === "f-project") drafts[selected] = { ...(drafts[selected] || {}), project: e.target.value };
 });
 document.addEventListener("change", async e => {
+  if (e.target.id === "bf") { boardFilter = e.target.value; renderPanelDynamic(); return; }
+  if (e.target.id === "bfOpen") { boardOpenOnly = e.target.checked; renderPanelDynamic(); return; }
   if (e.target.id !== "s-proj" || !selectedSession) return;
   const want = e.target.value, cur = projectForSession(selectedSession);
   if (cur && cur.id !== want) await patch("projects", cur.id, { sessionId: null });
   if (want) await patch("projects", want, { sessionId: selectedSession });
   toast(want ? "프로젝트와 연결했어요." : "연결을 풀었어요.");
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#ov")) { if (meetingCtl) { meetingCtl.abort(); meetingCtl = null; } $("#modalRoot").onclick = null; closeModal(); } });
+document.addEventListener("keydown", e => {
+  if (e.target.id === "chatIn" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendChat(); return; } if (e.key === "Escape" && $("#ov")) { if (meetingCtl) { meetingCtl.abort(); meetingCtl = null; } $("#modalRoot").onclick = null; closeModal(); } });
 
 /* ---------- render orchestration ---------- */
 let lastPanelKey = "";
